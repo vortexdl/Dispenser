@@ -1,0 +1,7 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+The JS Runtime being used is Deno (latest ver)
+Always use Neverthrow on functions when you can

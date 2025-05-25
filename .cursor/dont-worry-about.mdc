@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Don't worry about:
+
+- Fallbacks if Mongo isn't working

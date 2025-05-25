@@ -1,0 +1,43 @@
+{
+	"compilerOptions": {
+		"lib": ["deno.window"],
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true
+	},
+	"tasks": {
+		"test": "jest",
+		"start": "deno run --allow-all --unstable-kv src/app.ts --debug",
+		"start:debug": "deno run --inspect-brk --allow-all --unstable-kv src/app.ts --debug"
+	},
+	"imports": {
+		"$config": "./config.ts",
+		"$db": "./src/db.ts",
+		"@discordeno/bot": "npm:@discordeno/bot@^21.0.0",
+		"@discordeno/gateway": "npm:@discordeno/gateway@^21.0.0",
+		"@discordeno/utils": "npm:@discordeno/utils@^21.0.0",
+		"@discordeno/types": "npm:@discordeno/types@^21.0.0",
+		"dd-cache-proxy": "npm:dd-cache-proxy@^2.0.0",
+		"mongodb": "npm:mongodb@^6.3",
+		"xmlbuilder2": "npm:xmlbuilder2@^3.1.1",
+		"pino": "npm:pino@^9.7.0",
+		"pino-pretty": "npm:pino-pretty@^13.0.0"
+	},
+	"fmt": {
+		"options": {
+			"indentWidth": 4,
+			"useTabs": true
+		}
+	},
+	"lint": {
+		"rules": {
+			"exclude": [
+				"no-explicit-any",
+				"ban-types",
+				"no-misused-new",
+				"require-await",
+				"no-empty-interface"
+			]
+		}
+	},
+	"nodeModulesDir": "auto"
+}

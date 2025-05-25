@@ -1,0 +1,38 @@
+{
+	"dependencies": {
+		"@discordeno/bot": "^21.0.0",
+		"@discordeno/gateway": "^21.0.0",
+		"@discordeno/utils": "^21.0.0",
+		"@discordeno/types": "^21.0.0",
+		"@types/jest": "^29.5.14",
+		"dd-cache-proxy": "^2.0.0",
+		"jest": "^29.7.0",
+		"mongodb": "^6.16.0",
+		"neverthrow": "^8.2.0",
+		"ts-jest": "^29.3.4",
+		"xmlbuilder2": "^3.1.1",
+		"pino": "^9.7.0",
+		"pino-pretty": "^13.0.0"
+	},
+	"name": "dispenser",
+	"version": "1.0.0",
+	"main": "npx tsc src/app.node.js",
+	"directories": {
+		"doc": "docs"
+	},
+	"imports": {
+		"$db": "./src/db.ts"
+	},
+	"devDependencies": {},
+	"scripts": {},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/vortexdl/Dispenser.git"
+	},
+	"author": "Ryan Wilson",
+	"license": "ARR",
+	"bugs": {
+		"url": "https://github.com/vortexdl/Dispenser/issues"
+	},
+	"homepage": "https://github.com/vortexdl/Dispenser#readme"
+}

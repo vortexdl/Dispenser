@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# When you are responding to a user
+
+- Use the `Responder` class
+- If the problem is a user error, put an exclamation mark at the end of the response text
+- If the problem is a system error, put a warning emoji before the response text
+- If there is something being updated in the DB, put a checkbox at the end

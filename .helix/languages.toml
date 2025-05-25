@@ -1,0 +1,4 @@
+[[language]]
+name = "typescript"
+# TODO: Replace with the Bun LSP
+language-server = { command = "deno", args = ["lsp"] }

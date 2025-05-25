@@ -1,0 +1,7 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+When logging in a command, don't put the command name in the log like `logger.info("Gallery: Preparing banned servers gallery");`
+Instead be like `logger.info("Preparing banned servers gallery");`

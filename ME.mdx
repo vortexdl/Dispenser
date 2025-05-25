@@ -1,0 +1,17 @@
+I will make the cohort system
+
+A Cohort is a group of users that have the same filters
+Every hour, all of the links in the guild are checked to see what filters they are blocked on, if any cohort goes under the max unblocked links, every user in the cohort in that guild will be DMed a new unblocked link.
+
+`guildConfig.cohort.enable` (default true) - Will enable the cohort system
+`guildConfig.cohort.force` (default false) - Normally there will be a Request Link button on the panel and another one Request Link (Cohort), but this will make them combined and force the user to choose their filters first.
+
+`guildConfig.cohort.max_links` (default 1) - The max unblocked links a user has at one time
+
+`guildConfig.cohort.global_system` (default true) - Allow your members to be indexed in both the guild system and the global system for their cohorts
+
+`/cohort getunblockedlinks` - Will return the unblocked links for the user's cohort (everyone in the cohort is given the same unblocked links)
+
+`/cohort listguild` - Will return the list of Discord members `<name> (<id>)` (format) for the user's cohort
+`/cohort listguild` - Will return the list of Discord members `<name> (<id>)` (format) for the user's cohort in the global system (meaning for every server that has guildConfig.cohort.global_system enabled)
+> There will be an optional option called othercohort, where a user selects a combination of filters to look at the members of other cohorts

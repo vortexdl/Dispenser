@@ -1,0 +1,13 @@
+config.ts
+sync.sh
+ssh.sh
+sshRoot.sh
+
+# Package managers
+**/deno.lock
+**/package-lock.json
+**/node_modules/
+
+# Logging
+logs/
+
