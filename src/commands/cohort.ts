@@ -8,15 +8,12 @@ import {
 import {
 	cohortMembersDb,
 	filtersDb,
-	usersDb,
 	userCohortLinksDb,
+	usersDb,
 } from "../db.ts";
 
 import Responder from "../util/Responder.ts";
-import {
-	createPrefixedLogger,
-	type Logger,
-} from "../util/Logger.ts";
+import type { PrefixedLogger } from "../util/Logger.ts";
 import { getGuildConfig } from "../util/configManager.ts";
 import {
 	allocateLinksToUser,
@@ -48,7 +45,8 @@ export const data = {
 				{
 					type: ApplicationCommandOptionTypes.String,
 					name: "othercohort",
-					description: "View members of a different cohort (comma-separated filters)",
+					description:
+						"View members of a different cohort (comma-separated filters)",
 					required: false,
 				},
 			],
@@ -61,7 +59,8 @@ export const data = {
 				{
 					type: ApplicationCommandOptionTypes.String,
 					name: "othercohort",
-					description: "View members of a different cohort (comma-separated filters)",
+					description:
+						"View members of a different cohort (comma-separated filters)",
 					required: false,
 				},
 			],
@@ -78,14 +77,13 @@ export const adminOnly = false;
 export async function handle(
 	bot: Bot,
 	interaction: Interaction,
-	logger: Logger,
+	logger: PrefixedLogger,
 ): Promise<void> {
-	const cmdLogger = createPrefixedLogger("cohort", logger);
 	const responder = new Responder(
 		bot,
 		interaction.id,
 		interaction.token,
-		cmdLogger,
+		logger,
 	);
 
 	await responder.defer(MessageFlags.Ephemeral);
@@ -96,7 +94,7 @@ export async function handle(
 
 	if (!guildConfig.cohort.enable) {
 		await responder.editResponse(
-			"The cohort system is not enabled in this server"
+			"The cohort system is not enabled in this server",
 		);
 		return;
 	}
@@ -111,9 +109,12 @@ export async function handle(
 	const userFiltersDoc = await filtersDb.findOne({ guildId, userId });
 	const userFilters = userFiltersDoc?.filters || [];
 
-	if (userFilters.length === 0 && subcommand.name !== "listguild" && subcommand.name !== "listglobal") {
+	if (
+		userFilters.length === 0 && subcommand.name !== "listguild" &&
+		subcommand.name !== "listglobal"
+	) {
 		await responder.editResponse(
-			"You haven't set any filters yet. Please set your filters first to join a cohort"
+			"You haven't set any filters yet. Please set your filters first to join a cohort",
 		);
 		return;
 	}
@@ -126,38 +127,38 @@ export async function handle(
 				userId,
 				userFilters,
 				guildConfig.cohort.global_system,
-				logger
+				logger,
 			);
 
 			const cohortId = generateCohortId(userFilters);
-			
+
 			// Ensure cohort links exist and update if needed
 			const cohort = await ensureCohortLinks(
 				guildId,
 				userFilters,
 				false,
-				logger
+				logger,
 			);
-			
+
 			await updateCohortLinks(guildId, cohortId, false, logger);
-			
+
 			// Get shared cohort links for user
 			const cohortLinks = await getCohortLinksForUser(
 				guildId,
 				userId,
 				userFilters,
 				guildConfig.cohort.max_links,
-				logger
+				logger,
 			);
 
 			if (cohortLinks.length === 0) {
 				await responder.editResponse(
-					"No unblocked links are currently available for your cohort. You'll be notified when new links become available"
+					"No unblocked links are currently available for your cohort. You'll be notified when new links become available",
 				);
 				return;
 			}
 
-			const linksList = cohortLinks.map((link, index) => 
+			const linksList = cohortLinks.map((link, index) =>
 				`${index + 1}. ${link}`
 			).join("\n");
 
@@ -165,7 +166,10 @@ export async function handle(
 				embeds: [{
 					title: "Your Cohort's Unblocked Links",
 					description: linksList,
-					color: parseInt(guildConfig.theme.main_color.replace("#", ""), 16),
+					color: parseInt(
+						guildConfig.theme.main_color.replace("#", ""),
+						16,
+					),
 					footer: {
 						text: `Filters: ${userFilters.join(", ")}`,
 					},
@@ -176,25 +180,27 @@ export async function handle(
 
 		case "listguild": {
 			const otherCohortOption = subcommand.options?.find(
-				opt => opt.name === "othercohort"
+				(opt) => opt.name === "othercohort",
 			)?.value as string | undefined;
 
 			const filters = otherCohortOption
-				? otherCohortOption.split(",").map(f => f.trim()).filter(Boolean)
+				? otherCohortOption.split(",").map((f) => f.trim()).filter(
+					Boolean,
+				)
 				: userFilters;
 
 			if (filters.length === 0) {
 				await responder.editResponse(
-					"Please specify filters to view a cohort, or set your own filters first"
+					"Please specify filters to view a cohort, or set your own filters first",
 				);
 				return;
 			}
 
 			const members = await getCohortMembers(guildId, filters, false);
-			
+
 			if (members.length === 0) {
 				await responder.editResponse(
-					"No members found in this cohort for this guild"
+					"No members found in this cohort for this guild",
 				);
 				return;
 			}
@@ -202,24 +208,35 @@ export async function handle(
 			const membersList = await Promise.all(
 				members.slice(0, 20).map(async (member) => {
 					try {
-						const user = await bot.helpers.getUser(BigInt(member.userId));
-						return user ? `${user} (${member.userId})` : `Unknown User (${member.userId})`;
+						const user = await bot.helpers.getUser(
+							BigInt(member.userId),
+						);
+						return user
+							? `${user} (${member.userId})`
+							: `Unknown User (${member.userId})`;
 					} catch {
 						return `Unknown User (${member.userId})`;
 					}
-				})
+				}),
 			);
 
 			const description = membersList.join("\n");
-			const footer = members.length > 20 
-				? `Showing 20 of ${members.length} members | Filters: ${filters.join(", ")}`
-				: `Total members: ${members.length} | Filters: ${filters.join(", ")}`;
+			const footer = members.length > 20
+				? `Showing 20 of ${members.length} members | Filters: ${
+					filters.join(", ")
+				}`
+				: `Total members: ${members.length} | Filters: ${
+					filters.join(", ")
+				}`;
 
 			await responder.editResponseWithData({
 				embeds: [{
 					title: "Guild Cohort Members",
 					description,
-					color: parseInt(guildConfig.theme.main_color.replace("#", ""), 16),
+					color: parseInt(
+						guildConfig.theme.main_color.replace("#", ""),
+						16,
+					),
 					footer: { text: footer },
 				}],
 			});
@@ -229,31 +246,33 @@ export async function handle(
 		case "listglobal": {
 			if (!guildConfig.cohort.global_system) {
 				await responder.editResponse(
-					"The global cohort system is not enabled for this server"
+					"The global cohort system is not enabled for this server",
 				);
 				return;
 			}
 
 			const otherCohortOption = subcommand.options?.find(
-				opt => opt.name === "othercohort"
+				(opt) => opt.name === "othercohort",
 			)?.value as string | undefined;
 
 			const filters = otherCohortOption
-				? otherCohortOption.split(",").map(f => f.trim()).filter(Boolean)
+				? otherCohortOption.split(",").map((f) => f.trim()).filter(
+					Boolean,
+				)
 				: userFilters;
 
 			if (filters.length === 0) {
 				await responder.editResponse(
-					"Please specify filters to view a cohort, or set your own filters first"
+					"Please specify filters to view a cohort, or set your own filters first",
 				);
 				return;
 			}
 
 			const members = await getCohortMembers(guildId, filters, true);
-			
+
 			if (members.length === 0) {
 				await responder.editResponse(
-					"No members found in this cohort globally"
+					"No members found in this cohort globally",
 				);
 				return;
 			}
@@ -261,24 +280,35 @@ export async function handle(
 			const membersList = await Promise.all(
 				members.slice(0, 20).map(async (member) => {
 					try {
-						const user = await bot.helpers.getUser(BigInt(member.userId));
-						return user ? `${user} (${member.userId})` : `Unknown User (${member.userId})`;
+						const user = await bot.helpers.getUser(
+							BigInt(member.userId),
+						);
+						return user
+							? `${user} (${member.userId})`
+							: `Unknown User (${member.userId})`;
 					} catch {
 						return `Unknown User (${member.userId})`;
 					}
-				})
+				}),
 			);
 
 			const description = membersList.join("\n");
-			const footer = members.length > 20 
-				? `Showing 20 of ${members.length} members globally | Filters: ${filters.join(", ")}`
-				: `Total members globally: ${members.length} | Filters: ${filters.join(", ")}`;
+			const footer = members.length > 20
+				? `Showing 20 of ${members.length} members globally | Filters: ${
+					filters.join(", ")
+				}`
+				: `Total members globally: ${members.length} | Filters: ${
+					filters.join(", ")
+				}`;
 
 			await responder.editResponseWithData({
 				embeds: [{
 					title: "Global Cohort Members",
 					description,
-					color: parseInt(guildConfig.theme.main_color.replace("#", ""), 16),
+					color: parseInt(
+						guildConfig.theme.main_color.replace("#", ""),
+						16,
+					),
 					footer: { text: footer },
 				}],
 			});
@@ -288,4 +318,4 @@ export async function handle(
 		default:
 			await responder.editResponse("Unknown subcommand");
 	}
-} 
+}

@@ -6,7 +6,7 @@ import {
 } from "@discordeno/bot";
 import type { BotWithCache } from "../bot.ts";
 
-import { MongoError, MongoServerError, type DeleteResult } from "mongodb";
+import { type DeleteResult, MongoError, MongoServerError } from "mongodb";
 import { catsDb, linksDb } from "$db";
 
 import Responder from "../util/Responder.ts";
@@ -189,10 +189,12 @@ export async function handle(
 				const details = `'${category}'`;
 				const context = `from guild ${interaction.guildId}`;
 				const responseMsgRest = ` error occurred while ${action}`;
-				const loggerMsgRest = `${responseMsgRest} ${details} ${context}`;
+				const loggerMsgRest =
+					`${responseMsgRest} ${details} ${context}`;
 				const responseMsg = `⚠️ An${responseMsgRest}`;
 				if (
-					dbErr instanceof MongoError || dbErr instanceof MongoServerError
+					dbErr instanceof MongoError ||
+					dbErr instanceof MongoServerError
 				) {
 					logger.error(
 						`A database${loggerMsgRest}: ${dbErr}`,

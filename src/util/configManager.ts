@@ -1,7 +1,7 @@
 import { guildConfigsDb } from "$db";
 import {
-	DEFAULT_GUILD_CONFIG,
 	DEFAULT_GUILD_COHORT_CONFIG,
+	DEFAULT_GUILD_CONFIG,
 	DEFAULT_GUILD_DISCOVERY_CONFIG,
 	DEFAULT_GUILD_MASQR_CONFIG,
 	DEFAULT_GUILD_PANEL_CONFIG,
@@ -65,7 +65,10 @@ export async function getGuildConfig(
 					...currentDiscoveryConfig,
 				},
 				masqr: { ...DEFAULT_GUILD_MASQR_CONFIG, ...currentMasqrConfig },
-				cohort: { ...DEFAULT_GUILD_COHORT_CONFIG, ...currentCohortConfig },
+				cohort: {
+					...DEFAULT_GUILD_COHORT_CONFIG,
+					...currentCohortConfig,
+				},
 			};
 		}
 		return DEFAULT_GUILD_CONFIG;

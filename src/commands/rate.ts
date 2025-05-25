@@ -73,7 +73,12 @@ export async function handle(
 	// As a placeholder, using false for debug. This should be wired to actual config
 	const isDebug = false;
 
-	const responder = new Responder(bot, interaction.id, interaction.token, logger);
+	const responder = new Responder(
+		bot,
+		interaction.id,
+		interaction.token,
+		logger,
+	);
 
 	const subcommand = interaction.data?.options?.[0]?.name;
 	const subcommandOptions = parseCommandOptions(

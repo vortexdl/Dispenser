@@ -56,7 +56,12 @@ export async function sendReport(
 			linkUrl,
 		} = options;
 
-		const responder = new Responder(bot, interaction.id, interaction.token, logger);
+		const responder = new Responder(
+			bot,
+			interaction.id,
+			interaction.token,
+			logger,
+		);
 
 		const user = interaction.user;
 

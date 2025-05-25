@@ -4,7 +4,6 @@ import {
 	Collection,
 	createBot,
 	createDesiredPropertiesObject,
-	GatewayIntents,
 	Interaction,
 	InteractionResponseTypes,
 	InteractionTypes,
@@ -35,7 +34,7 @@ import { generatePanelData } from "./util/genPanel.ts";
 
 import { getBearerToken } from "./util/getBearerToken.ts";
 
-import { linksDb } from "$db";
+// import { linksDb } from "$db";
 
 import {
 	getRankedConfigOptions,
@@ -193,7 +192,7 @@ const botWithCache = createProxyCache(baseBot, {
 botWithCache.events.ready = (): void => {
 	logger.init(botWithCache, isDebug);
 	logger.info("Ready!");
-	
+
 	// Start the cohort system scheduler
 	startCohortScheduler(botWithCache, logger);
 };
@@ -202,9 +201,7 @@ botWithCache.events.interactionCreate = async (interaction: Interaction) => {
 };
 
 /** Handles all bot interactions */
-async function handleInteraction(
-	interaction: Interaction,
-): Promise<void> {
+async function handleInteraction(interaction: Interaction): Promise<void> {
 	const bot = interaction.bot;
 
 	const responder = new Responder(
@@ -274,7 +271,12 @@ async function handleInteraction(
 			const bearerToken = bearerTokenRes.value;
 			try {
 				logger.debug(`Running command ${command.data.name}`);
-				await command.handle(bot, interaction, createPrefixedLogger(command.data.name, logger), bearerToken);
+				await command.handle(
+					bot,
+					interaction,
+					createPrefixedLogger(command.data.name, logger),
+					bearerToken,
+				);
 				return;
 			} catch (err) {
 				let errorDetail = "An unknown error occurred";
@@ -327,10 +329,11 @@ async function handleInteraction(
 			const adminUserId = String(interaction.user?.id);
 
 			if (
-				commandName === "history" && focusedOption?.name === "category"
+				commandName === "history" &&
+				focusedOption?.name === "category"
 			) {
 				const userId = String(interaction.user?.id);
-				const searchValue = focusedOption.value as string || "";
+				const searchValue = (focusedOption.value as string) || "";
 
 				const result = await mostPopularUserCategories(
 					userId,
@@ -348,19 +351,20 @@ async function handleInteraction(
 				}
 				await responder.autocompleteResult(choices);
 			} else if (
-				commandName === "panel" && focusedOption?.name === "categories"
+				commandName === "panel" &&
+				focusedOption?.name === "categories"
 			) {
 				if (!guildId) {
 					await responder.autocompleteResult([]);
 					return;
 				}
 
-				const rawInput = focusedOption.value as string || "";
+				const rawInput = (focusedOption.value as string) || "";
 				const segments = rawInput.split(",");
 				const currentSegment = segments.pop()?.trim() ?? "";
-				const alreadySelected = segments.map((s) => s.trim()).filter(
-					Boolean,
-				);
+				const alreadySelected = segments
+					.map((s) => s.trim())
+					.filter(Boolean);
 
 				const result = await mostPopularAdminIssuedCategories(
 					bot,
@@ -372,16 +376,16 @@ async function handleInteraction(
 				let choices: ApplicationCommandOptionChoice[] = [];
 
 				if (result.isOk()) {
-					const popularCats = result.value.map((item) =>
-						item.category
+					const popularCats = result.value.map(
+						(item) => item.category,
 					);
 
 					const filteredCats = popularCats
 						.filter((cat) => !alreadySelected.includes(cat))
 						.filter((cat) =>
-							cat.toLowerCase().includes(
-								currentSegment.toLowerCase(),
-							)
+							cat
+								.toLowerCase()
+								.includes(currentSegment.toLowerCase())
 						)
 						.slice(0, 25);
 
@@ -400,9 +404,10 @@ async function handleInteraction(
 				}
 				await responder.autocompleteResult(choices);
 			} else if (
-				commandName === "config" && focusedOption?.name === "option"
+				commandName === "config" &&
+				focusedOption?.name === "option"
 			) {
-				const searchValue = focusedOption.value as string || "";
+				const searchValue = (focusedOption.value as string) || "";
 				const result = await getRankedConfigOptions(searchValue);
 				let choices: ApplicationCommandOptionChoice[] = [];
 				if (result.isOk()) {
@@ -415,20 +420,27 @@ async function handleInteraction(
 				}
 				await responder.autocompleteResult(choices);
 			} else if (
-				(commandName === "rename" && focusedOption &&
+				(commandName === "rename" &&
+					focusedOption &&
 					(focusedOption.name === "category1" ||
 						focusedOption.name === "category2")) ||
-				(commandName === "limit" && focusedOption &&
+				(commandName === "limit" &&
+					focusedOption &&
 					focusedOption.name === "category") ||
-				(commandName === "remove" && focusedOption &&
+				(commandName === "remove" &&
+					focusedOption &&
 					focusedOption.name === "category") ||
-				(commandName === "add" && focusedOption &&
+				(commandName === "add" &&
+					focusedOption &&
 					focusedOption.name === "category") ||
-				(commandName === "user" && focusedOption &&
+				(commandName === "user" &&
+					focusedOption &&
 					focusedOption.name === "category") ||
-				(commandName === "list" && focusedOption &&
+				(commandName === "list" &&
+					focusedOption &&
 					focusedOption.name === "category") ||
-				(commandName === "reset" && focusedOption &&
+				(commandName === "reset" &&
+					focusedOption &&
 					focusedOption.name === "category")
 			) {
 				if (!guildId) {
@@ -444,8 +456,8 @@ async function handleInteraction(
 				let choices: ApplicationCommandOptionChoice[] = [];
 
 				if (result.isOk()) {
-					const popularCats = result.value.map((item) =>
-						item.category
+					const popularCats = result.value.map(
+						(item) => item.category,
 					);
 					const query = typeof focusedOption.value === "string"
 						? focusedOption.value.toLowerCase()
@@ -455,10 +467,12 @@ async function handleInteraction(
 							cat.toLowerCase().includes(query)
 						)
 						: popularCats;
-					choices = filteredCats.map((cat) => ({
-						name: cat,
-						value: cat,
-					})).slice(0, 25);
+					choices = filteredCats
+						.map((cat) => ({
+							name: cat,
+							value: cat,
+						}))
+						.slice(0, 25);
 				} else {
 					logger.error(
 						`Error handling ${commandName} ${focusedOption.name} autocomplete:`,
@@ -474,13 +488,13 @@ async function handleInteraction(
 					await responder.autocompleteResult([]);
 					return;
 				}
-				const searchValue = focusedOption.value as string || "";
+				const searchValue = (focusedOption.value as string) || "";
 
 				let categoryFilter: string | undefined;
 				if (commandName === "remove") {
-					const categoryOption = interaction.data?.options?.find((
-						opt: any,
-					) => opt.name === "category");
+					const categoryOption = interaction.data?.options?.find(
+						(opt: any) => opt.name === "category",
+					);
 					if (
 						categoryOption &&
 						typeof categoryOption.value === "string"
@@ -824,16 +838,15 @@ export default async function initBot(): Promise<void> {
 			try {
 				const command = await import(`./commands/${file.name}`);
 
-				try {
-					commandData.push(command.data);
-				} catch (err) {
-					let errorDetail = "An unknown error occurred";
-					if (err instanceof Error) {
-						errorDetail = err.stack || err.message;
-					}
-					console.error(`Error in ${file.name}\
-${errorDetail}`);
+				if (!command.data) {
+					console.error(
+						"The command file does not export a data object:",
+						file.name,
+					);
+					continue;
 				}
+
+				commandData.push(command.data);
 
 				commands.set(command.data.name, command);
 			} catch (err) {
@@ -846,7 +859,7 @@ ${errorDetail}`);
 			}
 		}
 	}
-	console.debug(`Uploading ${commandData.map((c) => c.name).join(", ")}`);
+	//console.debug(`Uploading ${commandData.map((c) => c.name).join(", ")}`);
 	await botWithCache.rest.upsertGlobalApplicationCommands(commandData);
 
 	await botWithCache.start();

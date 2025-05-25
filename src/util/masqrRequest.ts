@@ -19,11 +19,11 @@ import Responder from "../util/Responder.ts";
 import { Logger } from "./Logger.ts";
 import { getGuildConfig } from "./configManager.ts";
 import { generateMasqrLicense } from "./masqrIntegration.ts";
-import { 
-	getFooterIconUrl, 
-	getFooterText, 
+import {
 	createDmDescription,
-	createMasqrDmDescription 
+	createMasqrDmDescription,
+	getFooterIconUrl,
+	getFooterText,
 } from "./dmHelper.ts";
 
 /**
@@ -286,14 +286,19 @@ ${linksLeftMsg("You have ")}`;
 			}
 
 			// Get footer icon and text
-			const footerIconUrl = await getFooterIconUrl(bot, String(guildId), guild, logger);
+			const footerIconUrl = await getFooterIconUrl(
+				bot,
+				String(guildId),
+				guild,
+				logger,
+			);
 			const footerText = getFooterText(String(guildId), guildName);
 
 			// Create description with custom message
 			const description = createMasqrDmDescription(
 				masqrInstructions,
 				guildConfig?.panel?.dmMessage || null,
-				filters || []
+				filters || [],
 			);
 
 			bot.helpers
@@ -366,7 +371,12 @@ ${linksLeftMsg("You have ")}`;
 			}
 
 			// Get footer icon and text
-			const footerIconUrl = await getFooterIconUrl(bot, String(guildId), guild, logger);
+			const footerIconUrl = await getFooterIconUrl(
+				bot,
+				String(guildId),
+				guild,
+				logger,
+			);
 			const footerText = getFooterText(String(guildId), guildName);
 
 			// Create description with custom message and remaining links
@@ -374,7 +384,7 @@ ${linksLeftMsg("You have ")}`;
 				link,
 				guildConfig?.panel?.dmMessage || null,
 				linksLeftMsg("You have "),
-				filters || []
+				filters || [],
 			);
 
 			bot.helpers

@@ -24,7 +24,8 @@ const data: CreateSlashApplicationCommand = {
 			name: "server",
 			description:
 				"The server the category is from. This could be either a guild id or the server name (it would get the most popular server with that name).",
-			/* If omitted, it will get the links for the current server */
+			required: false,
+			/* If omitted, it will get the links for the current server or tell the user they are using the command wrong */
 		},
 	],
 	dmPermission: true,

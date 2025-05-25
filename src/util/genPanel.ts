@@ -266,7 +266,7 @@ export async function generatePanelData(
 					style: ButtonStyles.Primary,
 				} as ButtonComponent,
 			);
-			
+
 			// Add cohort button as an option
 			buttonComponents.push({
 				type: MessageComponentTypes.Button,
@@ -282,7 +282,7 @@ export async function generatePanelData(
 				customId: requestCustomId,
 				style: ButtonStyles.Primary,
 			} as ButtonComponent);
-			
+
 			// Add cohort button as an option
 			buttonComponents.push({
 				type: MessageComponentTypes.Button,

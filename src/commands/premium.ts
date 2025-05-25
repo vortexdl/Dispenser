@@ -39,7 +39,12 @@ export async function handle(
 	interaction: Interaction,
 	logger: PrefixedLogger,
 ): Promise<void> {
-	const responder = new Responder(bot, interaction.id, interaction.token, logger);
+	const responder = new Responder(
+		bot,
+		interaction.id,
+		interaction.token,
+		logger,
+	);
 
 	const guildId = String(interaction.guildId);
 

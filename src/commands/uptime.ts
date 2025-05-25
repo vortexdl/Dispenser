@@ -35,7 +35,12 @@ export async function handle(
 	interaction: Interaction,
 	logger: PrefixedLogger,
 ): Promise<void> {
-	const responder = new Responder(bot, interaction.id, interaction.token, logger);
+	const responder = new Responder(
+		bot,
+		interaction.id,
+		interaction.token,
+		logger,
+	);
 
 	// Prepare a message to be sent to the user only
 	await responder.defer(MessageFlags.Ephemeral);

@@ -64,7 +64,9 @@ export const cohortMembersDb = db.collection<CohortMember>("cohortMembers");
 /** Collection for cohort unblocked links */
 export const cohortLinksDb = db.collection<CohortLinks>("cohortLinks");
 /** Collection for user cohort link allocations */
-export const userCohortLinksDb = db.collection<UserCohortLinks>("userCohortLinks");
+export const userCohortLinksDb = db.collection<UserCohortLinks>(
+	"userCohortLinks",
+);
 
 export type {
 	BotBanDoc,

@@ -51,7 +51,12 @@ export async function handle(
 	interaction: Interaction,
 	logger: PrefixedLogger,
 ): Promise<void> {
-	const responder = new Responder(bot, interaction.id, interaction.token, logger);
+	const responder = new Responder(
+		bot,
+		interaction.id,
+		interaction.token,
+		logger,
+	);
 
 	if (!interaction.guildId) {
 		await responder.respond("This command can only be used in a server!");
@@ -128,10 +133,12 @@ export async function handle(
 				const details = `for link '${linkDoc.link}'`;
 				const context = `from guild ${currentGuildId}`;
 				const responseMsgRest = ` error occurred while ${action}`;
-				const loggerMsgRest = `${responseMsgRest} ${details} ${context}`;
+				const loggerMsgRest =
+					`${responseMsgRest} ${details} ${context}`;
 				const responseMsg = `⚠️ An${responseMsgRest}`;
 				if (
-					dbErr instanceof MongoError || dbErr instanceof MongoServerError
+					dbErr instanceof MongoError ||
+					dbErr instanceof MongoServerError
 				) {
 					logger.error(
 						`A database${loggerMsgRest}: ${dbErr}`,

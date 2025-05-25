@@ -91,7 +91,9 @@ export async function handle(
 			userHistory = await usersDb.find(query).toArray();
 		} catch (dbErr) {
 			const action = `fetching user history`;
-			const details = categoryFilter ? `for category '${categoryFilter}'` : `across all categories`;
+			const details = categoryFilter
+				? `for category '${categoryFilter}'`
+				: `across all categories`;
 			const context = `for user ${userId}`;
 			const responseMsgRest = ` error occurred while ${action}`;
 			const loggerMsgRest = `${responseMsgRest} ${details} ${context}`;

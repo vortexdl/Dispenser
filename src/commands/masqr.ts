@@ -1,6 +1,3 @@
-// Ryan Wilson
-// src/commands/masqr.ts
-
 import {
 	ApplicationCommandTypes,
 	type Interaction,
@@ -19,9 +16,7 @@ import {
 import Responder from "../util/Responder.ts";
 import type { PrefixedLogger } from "../util/Logger.ts";
 
-import {
-	getGuildConfig
-} from "../util/configManager.ts";
+import { getGuildConfig } from "../util/configManager.ts";
 
 /**
  * Command data for the `/masqr` command
@@ -528,7 +523,9 @@ async function handleDomainCommands(
 					value: `Status: ${
 						domain.enabled ? "✅ Enabled" : "❌ Disabled"
 					}\nPSKs: ${domain.preSharedKeys.length}\nCreated: <t:${
-						Math.floor(domain.createdAt.getTime() / 1000)
+						Math.floor(
+							domain.createdAt.getTime() / 1000,
+						)
 					}:R>`,
 					inline: true,
 				})),
@@ -540,8 +537,8 @@ async function handleDomainCommands(
 
 		case "toggle": {
 			const domainOption = options?.find((opt) => opt.name === "domain");
-			const enabledOption = options?.find((opt) =>
-				opt.name === "enabled"
+			const enabledOption = options?.find(
+				(opt) => opt.name === "enabled",
 			);
 
 			if (!domainOption?.value || enabledOption?.value === undefined) {
@@ -599,12 +596,12 @@ async function handleLicenseCommands(
 	switch (command) {
 		case "generate": {
 			const domainOption = options?.find((opt) => opt.name === "domain");
-			const categoryOption = options?.find((opt) =>
-				opt.name === "category"
+			const categoryOption = options?.find(
+				(opt) => opt.name === "category",
 			);
 			const userOption = options?.find((opt) => opt.name === "user");
-			const expiresOption = options?.find((opt) =>
-				opt.name === "expires"
+			const expiresOption = options?.find(
+				(opt) => opt.name === "expires",
 			);
 
 			if (!domainOption?.value || !categoryOption?.value) {
@@ -616,7 +613,7 @@ async function handleLicenseCommands(
 
 			const domain = domainOption.value as string;
 			const category = categoryOption.value as string;
-			const targetUserId = userOption?.value as string || userId;
+			const targetUserId = (userOption?.value as string) || userId;
 			let expiresHours = expiresOption?.value as number;
 
 			// Check if the domain is configured
@@ -687,7 +684,7 @@ async function handleLicenseCommands(
 
 			const licenseKey = crypto.randomUUID().substring(0, 8);
 			const expirationTime = new Date(
-				Date.now() + (expiresHours * 60 * 60 * 1000),
+				Date.now() + expiresHours * 60 * 60 * 1000,
 			);
 
 			const license = {
@@ -729,7 +726,9 @@ async function handleLicenseCommands(
 					{
 						name: "Expires",
 						value: `<t:${
-							Math.floor(expirationTime.getTime() / 1000)
+							Math.floor(
+								expirationTime.getTime() / 1000,
+							)
 						}:R>`,
 						inline: true,
 					},
@@ -751,8 +750,8 @@ async function handleLicenseCommands(
 		}
 
 		case "revoke": {
-			const licenseOption = options?.find((opt) =>
-				opt.name === "license"
+			const licenseOption = options?.find(
+				(opt) => opt.name === "license",
 			);
 			if (!licenseOption?.value) {
 				await responder.editResponse("License key is required!");
@@ -787,9 +786,13 @@ async function handleLicenseCommands(
 			if (userOption?.value) filter.userId = userOption.value;
 			if (domainOption?.value) filter.host = domainOption.value;
 
-			const licenses = await masqrLicensesDb.find(filter).sort({
-				createdAt: -1,
-			}).limit(25).toArray();
+			const licenses = await masqrLicensesDb
+				.find(filter)
+				.sort({
+					createdAt: -1,
+				})
+				.limit(25)
+				.toArray();
 
 			if (licenses.length === 0) {
 				await responder.editResponse("No active licenses found!");
@@ -806,7 +809,9 @@ async function handleLicenseCommands(
 					name: `License: ${license.licenseKey}`,
 					value:
 						`Domain: **${license.host}**\nCategory: **${license.category}**\nUser: <@${license.userId}>\nExpires: <t:${
-							Math.floor(license.expires.getTime() / 1000)
+							Math.floor(
+								license.expires.getTime() / 1000,
+							)
 						}:R>\nStatus: ${
 							license.used ? "❌ Used" : "✅ Active"
 						}`,
@@ -833,11 +838,11 @@ async function handleLinkCommands(
 ): Promise<void> {
 	switch (command) {
 		case "protect": {
-			const categoryOption = options?.find((opt) =>
-				opt.name === "category"
+			const categoryOption = options?.find(
+				(opt) => opt.name === "category",
 			);
-			const enabledOption = options?.find((opt) =>
-				opt.name === "enabled"
+			const enabledOption = options?.find(
+				(opt) => opt.name === "enabled",
 			);
 
 			if (!categoryOption?.value || enabledOption?.value === undefined) {
@@ -893,14 +898,15 @@ async function handleCategoryCommands(
 ): Promise<void> {
 	switch (command) {
 		case "set": {
-			const categoryOption = options?.find((opt) =>
-				opt.name === "category"
+			const categoryOption = options?.find(
+				(opt) => opt.name === "category",
 			);
 			const optionOption = options?.find((opt) => opt.name === "option");
 			const valueOption = options?.find((opt) => opt.name === "value");
 
 			if (
-				!categoryOption?.value || !optionOption?.value ||
+				!categoryOption?.value ||
+				!optionOption?.value ||
 				!valueOption?.value
 			) {
 				await responder.editResponse(
@@ -1019,8 +1025,8 @@ async function handleCategoryCommands(
 		}
 
 		case "get": {
-			const categoryOption = options?.find((opt) =>
-				opt.name === "category"
+			const categoryOption = options?.find(
+				(opt) => opt.name === "category",
 			);
 
 			if (!categoryOption?.value) {
@@ -1071,14 +1077,18 @@ async function handleCategoryCommands(
 					{
 						name: "Created",
 						value: `<t:${
-							Math.floor(config.createdAt.getTime() / 1000)
+							Math.floor(
+								config.createdAt.getTime() / 1000,
+							)
 						}:R>`,
 						inline: true,
 					},
 					{
 						name: "Last Updated",
 						value: `<t:${
-							Math.floor(config.updatedAt.getTime() / 1000)
+							Math.floor(
+								config.updatedAt.getTime() / 1000,
+							)
 						}:R>`,
 						inline: true,
 					},
@@ -1090,7 +1100,8 @@ async function handleCategoryCommands(
 		}
 
 		case "list": {
-			const configs = await masqrCategoryConfigsDb.find({ guildId })
+			const configs = await masqrCategoryConfigsDb
+				.find({ guildId })
 				.toArray();
 
 			if (configs.length === 0) {
@@ -1111,7 +1122,9 @@ async function handleCategoryCommands(
 					value: `Enabled: ${
 						config.enabled ? "✅" : "❌"
 					}\nDefault: ${config.defaultLicenseExpirationHours}h\nMax: ${config.maxLicenseExpirationHours}h\nUpdated: <t:${
-						Math.floor(config.updatedAt.getTime() / 1000)
+						Math.floor(
+							config.updatedAt.getTime() / 1000,
+						)
 					}:R>`,
 					inline: true,
 				})),
@@ -1122,8 +1135,8 @@ async function handleCategoryCommands(
 		}
 
 		case "reset": {
-			const categoryOption = options?.find((opt) =>
-				opt.name === "category"
+			const categoryOption = options?.find(
+				(opt) => opt.name === "category",
 			);
 
 			if (!categoryOption?.value) {

@@ -2,17 +2,13 @@ import { type Bot, type Interaction } from "@discordeno/bot";
 import {
 	ApplicationCommandOptionTypes,
 	ChannelTypes,
-	InteractionResponseTypes,
 	MessageFlags,
 } from "@discordeno/bot";
 
 import { botBansDb } from "$db";
 
 import Responder from "../util/Responder.ts";
-import {
-	createPrefixedLogger,
-	type Logger,
-} from "../util/Logger.ts";
+import { createPrefixedLogger, type Logger } from "../util/Logger.ts";
 
 import { getGuildConfig } from "../util/configManager.ts";
 import { generatePanelData } from "../util/genPanel.ts";
@@ -75,12 +71,12 @@ export async function handle(
 	interaction: Interaction,
 	logger: Logger,
 ): Promise<void> {
-	const cmdLogger = createPrefixedLogger("panel", logger);
+	const logger = createPrefixedLogger("panel", logger);
 	const responder = new Responder(
 		bot,
 		interaction.id,
 		interaction.token,
-		cmdLogger,
+		logger,
 	);
 
 	const ephemeralOption = interaction.data?.options?.find(
@@ -90,7 +86,7 @@ export async function handle(
 	await responder.defer(ephemeralOption ? MessageFlags.Ephemeral : undefined);
 
 	if (!interaction.guildId) {
-		cmdLogger.warn("Panel command used outside of a server");
+		logger.warn("Panel command used outside of a server");
 		await responder.editResponse(
 			"This command can only be used in a server.",
 		);
@@ -103,7 +99,7 @@ export async function handle(
 			userId: String(interaction.user.id),
 		});
 		if (banRecord) {
-			cmdLogger.info(
+			logger.info(
 				`User ${interaction.user.id} is bot-banned in guild ${interaction.guildId}. Denying panel access.`,
 			);
 			await responder.editResponse(
@@ -113,7 +109,7 @@ export async function handle(
 		}
 	} catch (error: unknown) {
 		const message = error instanceof Error ? error.message : String(error);
-		cmdLogger.error(
+		logger.error(
 			`Error checking botBanDb for user ${interaction.user.id} in guild ${interaction.guildId}`,
 			message,
 		);
@@ -175,11 +171,11 @@ export async function handle(
 		cohortForce,
 	};
 
-	cmdLogger.debug("Generating panel data", panelOptions);
+	logger.debug("Generating panel data", panelOptions);
 	const panelData = await generatePanelData(bot, panelOptions);
 
 	if (!panelData) {
-		cmdLogger.warn(
+		logger.warn(
 			`Panel generation failed for guild ${interaction.guildId}, likely no categories.`,
 		);
 		await responder.editResponse(
@@ -188,7 +184,7 @@ export async function handle(
 		return;
 	}
 
-	cmdLogger.info(
+	logger.info(
 		`Panel generated successfully for guild ${interaction.guildId}`,
 	);
 	await responder.editResponseWithData(panelData);

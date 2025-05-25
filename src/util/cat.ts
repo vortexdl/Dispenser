@@ -61,7 +61,12 @@ export default async function (
 	interaction: Interaction,
 	logger: Logger,
 ) {
-	const responder = new Responder(bot, interaction.id, interaction.token, logger);
+	const responder = new Responder(
+		bot,
+		interaction.id,
+		interaction.token,
+		logger,
+	);
 
 	const userId = String(interaction.user.id);
 	const guildId = String(interaction.guildId);

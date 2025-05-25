@@ -4,25 +4,25 @@ import { LinkData, linksDb } from "$db";
 import { logger } from "./Logger.ts";
 
 export default async function (
-	guildId: string,
+    guildId: string
 ): Promise<ResultAsync<string[], string>> {
-	let links: LinkData[];
+    let links: LinkData[];
 
-	try {
-		const cursor = await linksDb.find({ guildId });
+    try {
+        const cursor = await linksDb.find({ guildId });
 
-		links = await cursor.toArray();
-	} catch (error) {
-		const errMsg =
-			"Error while trying to get all the categories from the database:";
-		logger.error(`${errMsg}:\n\t${error.stack}`);
-		return err(`${errMsg} ${error.message}`);
-	}
+        links = await cursor.toArray();
+    } catch (dbErr) {
+        const errMsg =
+            "dbErr while trying to get all the categories from the database:";
+        logger.dbErr(`${errMsg}:\n\t${dbErr.stack}`);
+        return err(`${errMsg} ${dbErr.message}`);
+    }
 
-	const allCats = links.map((links) => links.cat);
+    const allCats = links.map((links) => links.cat);
 
-	// Sets aren't allowed to have duplicates
-	const allCatsNoDuplicates = [...new Set(allCats)];
+    // Sets aren't allowed to have duplicates
+    const allCatsNoDuplicates = [...new Set(allCats)];
 
-	return ok(allCatsNoDuplicates);
+    return ok(allCatsNoDuplicates);
 }

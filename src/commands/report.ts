@@ -89,7 +89,12 @@ export async function handle(
 	logger: PrefixedLogger,
 	bearerToken: string,
 ): Promise<void> {
-	const responder = new Responder(bot, interaction.id, interaction.token, logger);
+	const responder = new Responder(
+		bot,
+		interaction.id,
+		interaction.token,
+		logger,
+	);
 
 	const options = parseCommandOptions(interaction.data?.options);
 

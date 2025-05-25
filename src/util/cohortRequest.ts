@@ -13,17 +13,13 @@ import Responder from "./Responder.ts";
 import { Logger } from "./Logger.ts";
 import { getGuildConfig } from "./configManager.ts";
 import {
-	ensureCohortMember,
 	ensureCohortLinks,
+	ensureCohortMember,
 	generateCohortId,
 	getCohortLinksForUser,
 	updateCohortLinks,
 } from "./cohort.ts";
-import { 
-	getFooterIconUrl, 
-	getFooterText,
-	formatFilters
-} from "./dmHelper.ts";
+import { formatFilters, getFooterIconUrl, getFooterText } from "./dmHelper.ts";
 
 export default async function cohortRequestHandle(
 	bot: Bot,
@@ -52,7 +48,9 @@ export default async function cohortRequestHandle(
 	const guildConfig = await getGuildConfig(guildIdStr);
 
 	if (!guildConfig.cohort.enable) {
-		await responder.respond("The cohort system is not enabled in this server");
+		await responder.respond(
+			"The cohort system is not enabled in this server",
+		);
 		return;
 	}
 
@@ -65,12 +63,16 @@ export default async function cohortRequestHandle(
 
 	if (userFilters.length === 0) {
 		await responder.respond(
-			"Please select your filters first to join a cohort"
+			"Please select your filters first to join a cohort",
 		);
 		return;
 	}
 
-	logger.info(`${name} is requesting cohort links with filters: ${userFilters.join(", ")}`);
+	logger.info(
+		`${name} is requesting cohort links with filters: ${
+			userFilters.join(", ")
+		}`,
+	);
 
 	// Ensure user is in cohort system
 	await ensureCohortMember(
@@ -78,40 +80,39 @@ export default async function cohortRequestHandle(
 		userIdStr,
 		userFilters,
 		guildConfig.cohort.global_system,
-		logger
+		logger,
 	);
 
 	const cohortId = generateCohortId(userFilters);
-	
+
 	// Ensure cohort links exist and update if needed
 	await ensureCohortLinks(
 		guildIdStr,
 		userFilters,
 		false,
-		logger
+		logger,
 	);
-	
+
 	await updateCohortLinks(guildIdStr, cohortId, false, logger);
-	
+
 	// Get shared cohort links
 	const cohortLinks = await getCohortLinksForUser(
 		guildIdStr,
 		userIdStr,
 		userFilters,
 		guildConfig.cohort.max_links,
-		logger
+		logger,
 	);
 
 	if (cohortLinks.length === 0) {
 		await responder.respond(
-			"No unblocked links are currently available for your cohort. You'll be notified when new links become available"
+			"No unblocked links are currently available for your cohort. You'll be notified when new links become available",
 		);
 		return;
 	}
 
-	const linksList = cohortLinks.map((link, index) => 
-		`${index + 1}. ${link}`
-	).join("\n");
+	const linksList = cohortLinks.map((link, index) => `${index + 1}. ${link}`)
+		.join("\n");
 
 	if (dmUser) {
 		const chan = (await bot.helpers.getDmChannel(userId)) as Channel;
@@ -128,32 +129,45 @@ export default async function cohortRequestHandle(
 		}
 
 		// Get footer icon and text
-		const footerIconUrl = await getFooterIconUrl(bot, String(guildId), guild, logger);
+		const footerIconUrl = await getFooterIconUrl(
+			bot,
+			String(guildId),
+			guild,
+			logger,
+		);
 		const footerText = getFooterText(String(guildId), guildName);
 
 		// Create description with custom message and filter info
 		let description = "";
-		
-		if (guildConfig?.panel?.dmMessage && guildConfig.panel.dmMessage.trim()) {
+
+		if (
+			guildConfig?.panel?.dmMessage && guildConfig.panel.dmMessage.trim()
+		) {
 			description += `${guildConfig.panel.dmMessage}\n`;
 		}
-		
+
 		description += `${linksList}\n`;
-		
+
 		if (userFilters.length > 0) {
 			const filterText = formatFilters(userFilters);
-			description += `These links are unblocked on ${filterText} at this time`;
+			description +=
+				`These links are unblocked on ${filterText} at this time`;
 		}
 
 		try {
 			await bot.helpers.sendMessage(chan.id, {
 				embeds: [{
 					type: "rich",
-					color: parseInt(guildConfig.theme.main_color.replace("#", ""), 16),
+					color: parseInt(
+						guildConfig.theme.main_color.replace("#", ""),
+						16,
+					),
 					title: "Your Cohort's Unblocked Links",
 					description,
 					footer: {
-						text: `${footerText} | Filters: ${userFilters.join(", ")}`,
+						text: `${footerText} | Filters: ${
+							userFilters.join(", ")
+						}`,
 						iconUrl: footerIconUrl,
 					},
 				}],
@@ -162,7 +176,7 @@ export default async function cohortRequestHandle(
 		} catch (error: unknown) {
 			logger.error("Failed to send DM:", error as Error);
 			await responder.respond(
-				"I couldn't send you a DM. Please check your privacy settings to allow DMs from server members"
+				"I couldn't send you a DM. Please check your privacy settings to allow DMs from server members",
 			);
 		}
 	} else {
@@ -176,4 +190,4 @@ export default async function cohortRequestHandle(
 			},
 		});
 	}
-} 
+}

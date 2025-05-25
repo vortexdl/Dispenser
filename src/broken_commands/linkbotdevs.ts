@@ -8,13 +8,13 @@ import type { BotWithCache } from "../bot.ts";
 import Responder from "../util/Responder.ts";
 import type { PrefixedLogger } from "../util/Logger.ts";
 
-import { createPaginator } from "../util/pagination.ts";
+// import { createPaginator } from "../util/pagination.ts";
 import { createGallery } from "../util/galleryCreator.ts";
 import {
-	type BannedGalleryGuild,
+	// type BannedGalleryGuild,
 	banServerGlobally,
-	createBannedGalleryEmbed,
-	getBannedGuilds,
+	// createBannedGalleryEmbed,
+	// getBannedGuilds,
 	isBotDeveloper,
 	unbanServerGlobally,
 } from "../util/devGlobalBans.ts";
@@ -89,7 +89,7 @@ export async function handle(
 	);
 
 	// Check if user is a bot developer
-	if (!await isBotDeveloper(interaction)) {
+	if (!(await isBotDeveloper(interaction))) {
 		logger.warn(
 			`User ${interaction.user.id} attempted to use /linkbotdevs without permission`,
 		);
@@ -137,8 +137,8 @@ async function handleBan(
 	logger: PrefixedLogger,
 	responder: Responder,
 ): Promise<void> {
-	const serverIdOption = options?.find((opt: any) =>
-		opt.name === "server_id"
+	const serverIdOption = options?.find(
+		(opt: any) => opt.name === "server_id",
 	);
 	const reasonOption = options?.find((opt: any) => opt.name === "reason");
 
@@ -166,8 +166,8 @@ async function handleUnban(
 	logger: PrefixedLogger,
 	responder: Responder,
 ): Promise<void> {
-	const serverIdOption = options?.find((opt: any) =>
-		opt.name === "server_id"
+	const serverIdOption = options?.find(
+		(opt: any) => opt.name === "server_id",
 	);
 
 	if (!serverIdOption || typeof serverIdOption.value !== "string") {
@@ -190,12 +190,15 @@ async function handleBannedGallery(
 	logger: PrefixedLogger,
 	bearerToken: string,
 ): Promise<void> {
-	await createGallery({
-		bot,
-		interaction,
-		logger,
-		galleryType: "banned",
-		title: "Globally Banned Server Gallery",
-		showBannedOnly: true,
-	}, bearerToken);
+	await createGallery(
+		{
+			bot,
+			interaction,
+			logger,
+			galleryType: "banned",
+			title: "Globally Banned Server Gallery",
+			showBannedOnly: true,
+		},
+		bearerToken,
+	);
 }

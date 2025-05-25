@@ -72,7 +72,6 @@ export async function handle(
 	logger: PrefixedLogger,
 	bearerToken: string,
 ): Promise<void> {
-
 	const typeOption = interaction.data?.options?.find((opt) =>
 		opt.name === "type"
 	)?.value as

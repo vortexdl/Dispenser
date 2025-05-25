@@ -1,6 +1,3 @@
-// Ryan Wilson
-// src/util/logger.ts
-
 import pino, { type Logger as PinoLogger } from "npm:pino";
 import type { Bot } from "@discordeno/bot";
 import config from "$config";
@@ -44,9 +41,12 @@ class DiscordStream {
 	 */
 	async write(logEntryJson: string): Promise<void> {
 		if (
-			!this.botInstance || !this.channelId ||
+			!this.botInstance ||
+			!this.channelId ||
 			!config.logging.discord.enabled
-		) return;
+		) {
+			return;
+		}
 
 		try {
 			const logEntry = JSON.parse(logEntryJson);
@@ -58,7 +58,9 @@ class DiscordStream {
 				if (
 					logEntry.level === 30 /* pino INFO */ &&
 					logEntry.msg.startsWith("pino-pretty")
-				) return;
+				) {
+					return;
+				}
 				if (logEntry.level < 30 /* pino DEBUG */ && !this.isDebug) {
 					return;
 				}
@@ -66,7 +68,9 @@ class DiscordStream {
 					logEntry.level <
 						20 /* pino TRACE, not used by our levels */ &&
 					!this.isDebug
-				) return;
+				) {
+					return;
+				}
 
 				const pinoLevelToDiscord = (level: number): string => {
 					// pino fatal
@@ -86,14 +90,19 @@ class DiscordStream {
 				// Format the log message for Discord
 				const levelStr = pinoLevelToDiscord(logEntry.level);
 				let discordMessage = `**${levelStr}** | ${
-					new Date(logEntry.time || Date.now()).toISOString()
+					new Date(
+						logEntry.time || Date.now(),
+					).toISOString()
 				}\n\`\`\`\n${logEntry.msg}`;
 				// Add any extra fields from the log to the Discord message
 				const extras: string[] = [];
 				for (const key in logEntry) {
 					if (
-						key !== "time" && key !== "level" && key !== "msg" &&
-						key !== "pid" && key !== "hostname"
+						key !== "time" &&
+						key !== "level" &&
+						key !== "msg" &&
+						key !== "pid" &&
+						key !== "hostname"
 					) {
 						extras.push(
 							`${key}: ${
@@ -107,20 +116,22 @@ class DiscordStream {
 				if (extras.length > 0) {
 					discordMessage += "\n" + extras.join("\n");
 				}
-				discordMessage += "\n\`\`\`";
+				discordMessage += "\n```";
 				if (discordMessage.length > 2000) {
 					discordMessage = discordMessage.substring(0, 1990) +
 						"... (truncated)";
 				}
 
-				await this.botInstance.helpers.sendMessage(this.channelId, {
-					content: discordMessage,
-				}).catch((err) => {
-					console.warn(
-						`${getFormattedTimestamp()} [WRN] Failed to send log to Discord:`,
-						err,
-					);
-				});
+				await this.botInstance.helpers
+					.sendMessage(this.channelId, {
+						content: discordMessage,
+					})
+					.catch((err) => {
+						console.warn(
+							`${getFormattedTimestamp()} [WRN] Failed to send log to Discord:`,
+							err,
+						);
+					});
 			}
 		} catch (e) {
 			console.warn(
@@ -224,8 +235,15 @@ export class Logger {
 		if (config.logging.fileEnabled) {
 			const today = new Date();
 			const fileName = `${today.getFullYear()}-${
-				String(today.getMonth() + 1).padStart(2, "0")
-			}-${String(today.getDate()).padStart(2, "0")}.log`;
+				String(
+					today.getMonth() + 1,
+				).padStart(2, "0")
+			}-${
+				String(today.getDate()).padStart(
+					2,
+					"0",
+				)
+			}.log`;
 			const filePath = `${this.logDirectory}/${fileName}`;
 			targets.push({
 				level: this.isDebugMode ? "debug" : "info", // Log debug to file if isDebugMode
@@ -235,13 +253,17 @@ export class Logger {
 		}
 
 		const transport = pino.transport({ targets });
-		this.pinoLogger = pino.default({
-			level: this.isDebugMode ? "debug" : "info",
-		}, transport);
+		this.pinoLogger = pino.default(
+			{
+				level: this.isDebugMode ? "debug" : "info",
+			},
+			transport,
+		);
 
 		// Discord transport (custom stream for default guild log channel)
 		if (
-			config.logging.discord.enabled && this.developerLogChannelId &&
+			config.logging.discord.enabled &&
+			this.developerLogChannelId &&
 			this.botInstance
 		) {
 			const defaultDiscordStream = new DiscordStream(
@@ -285,7 +307,7 @@ export class Logger {
 			const pinoOptions: pino.LoggerOptions = {
 				// Set level to ensure the message passes if the method (eg .debug()) is called
 				level: this.isDebugMode || level !== "debug"
-					? (level === "fatal"
+					? level === "fatal"
 						? "fatal"
 						: level === "error"
 						? "error"
@@ -293,7 +315,7 @@ export class Logger {
 						? "warn"
 						: level === "info"
 						? "info"
-						: "debug")
+						: "debug"
 					: "info",
 			};
 			const tempPinoLogger = pino.default(pinoOptions, tempDiscordStream);
@@ -336,7 +358,8 @@ export class Logger {
 
 		if (this.isDebugMode) {
 			if (
-				discordChannelIdOverride && this.botInstance &&
+				discordChannelIdOverride &&
+				this.botInstance &&
 				config.logging.discord.enabled
 			) {
 				const overrideAsBigInt = BigInt(discordChannelIdOverride);
@@ -373,7 +396,8 @@ export class Logger {
 		}
 
 		if (
-			discordChannelIdOverride && this.botInstance &&
+			discordChannelIdOverride &&
+			this.botInstance &&
 			config.logging.discord.enabled
 		) {
 			const overrideAsBigInt = BigInt(discordChannelIdOverride);
@@ -408,7 +432,8 @@ export class Logger {
 		}
 
 		if (
-			discordChannelIdOverride && this.botInstance &&
+			discordChannelIdOverride &&
+			this.botInstance &&
 			config.logging.discord.enabled
 		) {
 			const overrideAsBigInt = BigInt(discordChannelIdOverride);
@@ -444,7 +469,8 @@ export class Logger {
 		}
 
 		if (
-			discordChannelIdOverride && this.botInstance &&
+			discordChannelIdOverride &&
+			this.botInstance &&
 			config.logging.discord.enabled
 		) {
 			const overrideAsBigInt = BigInt(discordChannelIdOverride);
@@ -482,7 +508,8 @@ export class Logger {
 		}
 
 		if (
-			discordChannelIdOverride && this.botInstance &&
+			discordChannelIdOverride &&
+			this.botInstance &&
 			config.logging.discord.enabled
 		) {
 			const overrideAsBigInt = BigInt(discordChannelIdOverride);

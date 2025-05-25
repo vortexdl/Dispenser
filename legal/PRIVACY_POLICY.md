@@ -30,22 +30,22 @@ their bot compared to the defaults in the global instance config\*. Dispenser
 managers\* cannot turn off\* this command, nor will we.
 
 - The "bot config" refers to a file where the API Tokens are required to set up
- an instance of the bot stored. These API Tokens are, in our case, the
- Dispenser Bot's Discord Token, Dispenser Bot Canary's Discord Token, and the
- Mongo DB Atlas API Token to connect to the remote database\*. You can see how
- we may configure the bot config by looking in the file "index.d.ts," which
- provides documentation.
+  an instance of the bot stored. These API Tokens are, in our case, the
+  Dispenser Bot's Discord Token, Dispenser Bot Canary's Discord Token, and the
+  Mongo DB Atlas API Token to connect to the remote database\*. You can see how
+  we may configure the bot config by looking in the file "index.d.ts," which
+  provides documentation.
 - The "global instance config" is the file we configure that controls how the
- bot should interact* by default with no changes to the configuration from
- Dispenser managers*.
+  bot should interact* by default with no changes to the configuration from
+  Dispenser managers*.
 - Turning off a command\* prevents the Discord member from running a command
   while the bot is still online in this context.
 - A "Dispenser manager" refers to a Discord member permitted by Discord members
   who have the "administration" permissions in the Discord server and can
   configure Dispenser's functionality.
 - Database\* refers to the medium of storage sourced from MongoDB's Atlas
- servers hosted by "MongoDB, Inc." for our data, and certain records may be
- copied to the RAM of our Dispenser server.
+  servers hosted by "MongoDB, Inc." for our data, and certain records may be
+  copied to the RAM of our Dispenser server.
 - Our named hosting providers may access the data at any time. We reserve the
   right to change the hosting providers as we see fit. If this happens, we will
   notify you of the change in our "Vyper Group" Discord server\* in the
@@ -60,9 +60,9 @@ managers\* cannot turn off\* this command, nor will we.
   the following response if it is their first time using the bot. When the user
   recognizes it, they will resume regular bot interaction.
 - "interact" refers to providing the bot inputs to process in this context.
- "calculated response" means that the bot has read the inputs and has already
- processed them in the code. "command" refers to a "slash command" interaction.
- As explained by Discord,
- "https://support.discord.com/hc/en-us/articles/1500000368501-Slash-Commands-FAQ".
+  "calculated response" means that the bot has read the inputs and has already
+  processed them in the code. "command" refers to a "slash command" interaction.
+  As explained by Discord,
+  "https://support.discord.com/hc/en-us/articles/1500000368501-Slash-Commands-FAQ".
 - The "Vyper Group" Discord server is where we send essential notices relevant
- to our users. It is accessible at https://discord.gg/nowgg at this time.
+  to our users. It is accessible at https://discord.gg/nowgg at this time.

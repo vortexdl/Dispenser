@@ -117,7 +117,8 @@ export const configMetadataDetails: ConfigItemMetadata[] = [
 	},
 	{
 		path: "panel.dmMessage",
-		description: "Custom message shown in DM embeds before the link (null to disable)",
+		description:
+			"Custom message shown in DM embeds before the link (null to disable)",
 		defaultValue: getValueByPath("panel.dmMessage", DEFAULT_GUILD_CONFIG),
 	},
 	{
@@ -144,7 +145,8 @@ export const configMetadataDetails: ConfigItemMetadata[] = [
 	},
 	{
 		path: "cohort.force",
-		description: "Force users to choose filters first by combining request buttons (true/false)",
+		description:
+			"Force users to choose filters first by combining request buttons (true/false)",
 		defaultValue: getValueByPath("cohort.force", DEFAULT_GUILD_CONFIG),
 	},
 	{
@@ -154,8 +156,12 @@ export const configMetadataDetails: ConfigItemMetadata[] = [
 	},
 	{
 		path: "cohort.global_system",
-		description: "Allow members to be indexed in both guild and global cohort systems (true/false)",
-		defaultValue: getValueByPath("cohort.global_system", DEFAULT_GUILD_CONFIG),
+		description:
+			"Allow members to be indexed in both guild and global cohort systems (true/false)",
+		defaultValue: getValueByPath(
+			"cohort.global_system",
+			DEFAULT_GUILD_CONFIG,
+		),
 	},
 ];
 

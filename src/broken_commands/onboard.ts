@@ -13,7 +13,7 @@ const data: CreateSlashApplicationCommand = {
         description:
             "Allows you to skip to parts of the onboarding process. This is useful when you have already done the onboarding process before.",
         choices: [
-            {
+            {   
             }
         ]
         required: false,

@@ -9,7 +9,8 @@ import type { GuildConfig } from "../types/guildConfig.d.ts";
 /**
  * Discord's official logo URL for use in DM embeds
  */
-export const DISCORD_LOGO_URL = "https://cdn.discordapp.com/embed/avatars/0.png";
+export const DISCORD_LOGO_URL =
+	"https://cdn.discordapp.com/embed/avatars/0.png";
 
 /**
  * Gets the appropriate footer icon URL based on the context
@@ -69,7 +70,7 @@ export function formatFilters(filters: string[]): string {
 	if (filters.length === 0) return "";
 	if (filters.length === 1) return filters[0];
 	if (filters.length === 2) return `${filters[0]} and ${filters[1]}`;
-	
+
 	const lastFilter = filters[filters.length - 1];
 	const otherFilters = filters.slice(0, -1);
 	return `${otherFilters.join(", ")}, and ${lastFilter}`;
@@ -90,20 +91,20 @@ export function createDmDescription(
 	filters: string[],
 ): string {
 	let description = "";
-	
+
 	if (customMessage && customMessage.trim()) {
 		description += `${customMessage}\n`;
 	}
-	
+
 	description += `${link}\n`;
-	
+
 	if (filters.length > 0) {
 		const filterText = formatFilters(filters);
 		description += `This link is unblocked on ${filterText} at this time\n`;
 	}
-	
+
 	description += `\n${linksLeftMsg}`;
-	
+
 	return description;
 }
 
@@ -120,17 +121,18 @@ export function createMasqrDmDescription(
 	filters: string[],
 ): string {
 	let description = "";
-	
+
 	if (customMessage && customMessage.trim()) {
 		description += `${customMessage}\n`;
 	}
-	
+
 	if (filters.length > 0) {
 		const filterText = formatFilters(filters);
-		description += `This Masqr-protected link is unblocked on ${filterText} at this time\n\n`;
+		description +=
+			`This Masqr-protected link is unblocked on ${filterText} at this time\n\n`;
 	}
-	
+
 	description += masqrInstructions;
-	
+
 	return description;
-} 
+}

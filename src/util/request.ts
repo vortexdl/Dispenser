@@ -15,10 +15,10 @@ import isAdmin from "../util/isAdmin.ts";
 import Responder from "../util/Responder.ts";
 import { Logger } from "./Logger.ts";
 import { getGuildConfig } from "./configManager.ts";
-import { 
-	getFooterIconUrl, 
-	getFooterText, 
-	createDmDescription 
+import {
+	createDmDescription,
+	getFooterIconUrl,
+	getFooterText,
 } from "./dmHelper.ts";
 
 export default async function (
@@ -229,7 +229,12 @@ export default async function (
 		}
 
 		// Get footer icon and text
-		const footerIconUrl = await getFooterIconUrl(bot, String(guildId), guild, logger);
+		const footerIconUrl = await getFooterIconUrl(
+			bot,
+			String(guildId),
+			guild,
+			logger,
+		);
 		const footerText = getFooterText(String(guildId), guildName);
 
 		// Create description with custom message and remaining links
@@ -237,7 +242,7 @@ export default async function (
 			link,
 			guildConfig?.panel?.dmMessage || null,
 			linksLeftMsg("You have "),
-			filters || []
+			filters || [],
 		);
 
 		bot.helpers

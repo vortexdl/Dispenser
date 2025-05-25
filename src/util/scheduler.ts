@@ -16,7 +16,7 @@ export function startCohortScheduler(bot: Bot, logger: Logger): void {
 	}
 
 	logger.info("Starting cohort scheduler - will check every hour");
-	
+
 	// Run immediately on start
 	checkAndNotifyCohorts(bot, logger).catch((error) => {
 		logger.error("Error in initial cohort check", error as Error);
@@ -41,4 +41,4 @@ export function stopCohortScheduler(logger: Logger): void {
 	} else {
 		logger.warn("Cohort scheduler was not running");
 	}
-} 
+}

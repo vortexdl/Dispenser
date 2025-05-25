@@ -118,7 +118,8 @@ export async function handle(
 	if (updateResult.modifiedCount === 0) {
 		msg = `User ${userId} had no data to reset in this server!`;
 	} else {
-		msg = `Reset ${updateResult.modifiedCount} record(s) for user ${userId} ✅`;
+		msg =
+			`Reset ${updateResult.modifiedCount} record(s) for user ${userId} ✅`;
 	}
 
 	await responder.editResponse(msg);

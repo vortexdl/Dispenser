@@ -1,13 +1,9 @@
 import { type Interaction } from "@discordeno/bot";
-import {
-	ApplicationCommandOptionTypes,
-	ApplicationCommandTypes,
-	MessageFlags,
-} from "@discordeno/bot";
+import { ApplicationCommandTypes, MessageFlags } from "@discordeno/bot";
 import type { BotWithCache } from "../bot.ts";
 
 import Responder from "../util/Responder.ts";
-import { createPrefixedLogger, Logger } from "../util/Logger.ts";
+import type { PrefixedLogger } from "../util/Logger.ts";
 
 import { getGuildConfig } from "../util/configManager.ts";
 import { createPaginator } from "../util/pagination.ts";
@@ -66,14 +62,13 @@ export const adminOnly = false;
 export async function handle(
 	botWithCache: BotWithCache,
 	interaction: Interaction,
-	logger: Logger,
+	logger: PrefixedLogger,
 ): Promise<void> {
-	const cmdLogger = createPrefixedLogger("dmpanel", logger);
 	const responder = new Responder(
 		botWithCache,
 		interaction.id,
 		interaction.token,
-		cmdLogger,
+		logger,
 	);
 
 	// This command should only work in DMs
@@ -99,7 +94,7 @@ export async function handle(
 				typeof cachedGuildsCollection.values === "function"
 			) {
 				allBotGuilds = Array.from(cachedGuildsCollection.values());
-				cmdLogger.info(
+				logger.info(
 					`Retrieved ${allBotGuilds.length} guilds from cache`,
 				);
 			}
@@ -107,7 +102,7 @@ export async function handle(
 
 		// Fallback if no cache or cache is empty
 		if (allBotGuilds.length === 0) {
-			cmdLogger.warn(
+			logger.warn(
 				"Bot cache not available, using alternative method to get guilds",
 			);
 			// Try to get guilds using the API
@@ -116,11 +111,11 @@ export async function handle(
 					() => [],
 				);
 				allBotGuilds = Array.isArray(guilds) ? guilds : [];
-				cmdLogger.info(
+				logger.info(
 					`Retrieved ${allBotGuilds.length} guilds using API fallback`,
 				);
 			} catch (error) {
-				cmdLogger.error("Failed to get guilds using fallback method", {
+				logger.error("Failed to get guilds using fallback method", {
 					error,
 				});
 				await responder.editResponse(
@@ -173,7 +168,7 @@ export async function handle(
 					}
 				}
 			} catch (error) {
-				cmdLogger.warn(
+				logger.warn(
 					`Error checking membership for guild ${
 						String(guild?.id || "unknown")
 					}`,
@@ -189,7 +184,7 @@ export async function handle(
 			return;
 		}
 
-		cmdLogger.info(
+		logger.info(
 			`Found ${userGuilds.length} servers with panels for user ${interaction.user.id}`,
 		);
 
@@ -197,7 +192,7 @@ export async function handle(
 		await createPaginator({
 			bot: botWithCache,
 			interaction,
-			logger: cmdLogger,
+			logger: logger,
 			data: userGuilds,
 			itemsPerPage: 1,
 			embedGenerator: createDMPanelEmbed,
@@ -210,7 +205,7 @@ export async function handle(
 			defer: false, // We already deferred above
 		});
 	} catch (error) {
-		cmdLogger.error("Error creating DM panel", { error });
+		logger.error("Error creating DM panel", { error });
 		await responder.editResponse(
 			"An error occurred while creating the panel. Please try again later!",
 		);

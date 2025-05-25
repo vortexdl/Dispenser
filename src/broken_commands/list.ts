@@ -9,7 +9,7 @@ import type { BotWithCache } from "../bot.ts";
 import { MongoError, MongoServerError } from "mongodb";
 import { create } from "xmlbuilder2";
 import { limitsDb, linksDb, rolesDb } from "$db";
-import type { Limit, Links, Roles } from "../types/db.js";
+import type { Limit, Links, Roles } from "../types/db.d.ts";
 
 import Responder from "../util/Responder.ts";
 import type { PrefixedLogger } from "../util/Logger.ts";

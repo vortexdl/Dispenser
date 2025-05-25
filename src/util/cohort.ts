@@ -2,8 +2,20 @@
 
 import { createHash } from "node:crypto";
 import type { Bot } from "@discordeno/bot";
-import { cohortLinksDb, cohortMembersDb, filtersDb, linksDb, userCohortLinksDb, usersDb } from "../db.ts";
-import type { CohortLinks, CohortMember, Links, UserCohortLinks } from "../types/db.d.ts";
+import {
+	cohortLinksDb,
+	cohortMembersDb,
+	filtersDb,
+	linksDb,
+	userCohortLinksDb,
+	usersDb,
+} from "../db.ts";
+import type {
+	CohortLinks,
+	CohortMember,
+	Links,
+	UserCohortLinks,
+} from "../types/db.d.ts";
 import type { GuildConfig } from "../types/guildConfig.d.ts";
 import { getGuildConfig } from "./configManager.ts";
 import type { Logger } from "./Logger.ts";
@@ -25,10 +37,10 @@ export async function ensureCohortMember(
 	userId: string,
 	filters: string[],
 	globalSystem: boolean,
-	logger: Logger
+	logger: Logger,
 ): Promise<CohortMember> {
 	const now = new Date();
-	
+
 	const existingMember = await cohortMembersDb.findOne({
 		guildId,
 		userId,
@@ -37,7 +49,8 @@ export async function ensureCohortMember(
 	if (existingMember) {
 		// Update if filters or global system changed
 		if (
-			JSON.stringify(existingMember.filters.sort()) !== JSON.stringify(filters.sort()) ||
+			JSON.stringify(existingMember.filters.sort()) !==
+				JSON.stringify(filters.sort()) ||
 			existingMember.globalSystem !== globalSystem
 		) {
 			await cohortMembersDb.updateOne(
@@ -48,7 +61,7 @@ export async function ensureCohortMember(
 						globalSystem,
 						updatedAt: now,
 					},
-				}
+				},
 			);
 			logger.info(`Updated cohort member ${userId} in guild ${guildId}`);
 		}
@@ -67,7 +80,7 @@ export async function ensureCohortMember(
 
 	await cohortMembersDb.insertOne(newMember);
 	logger.info(`Created new cohort member ${userId} in guild ${guildId}`);
-	
+
 	return newMember;
 }
 
@@ -78,7 +91,7 @@ export async function ensureCohortLinks(
 	guildId: string,
 	filters: string[],
 	globalCohort: boolean,
-	logger: Logger
+	logger: Logger,
 ): Promise<CohortLinks> {
 	const cohortId = generateCohortId(filters);
 	const now = new Date();
@@ -116,10 +129,12 @@ export async function ensureCohortLinks(
 export async function isLinkBlockedByFilters(
 	link: string,
 	filters: string[],
-	logger: Logger
+	logger: Logger,
 ): Promise<boolean> {
-	logger.debug(`Checking if link ${link} is blocked by filters: ${filters.join(", ")}`);
-	
+	logger.debug(
+		`Checking if link ${link} is blocked by filters: ${filters.join(", ")}`,
+	);
+
 	// Check Lightspeed filter
 	if (filters.includes("lightspeed")) {
 		try {
@@ -128,20 +143,25 @@ export async function isLinkBlockedByFilters(
 				logger.debug(`Link ${link} is blocked by Lightspeed filter`);
 				return true;
 			} else if (isBlockedResult.isErr()) {
-				logger.warn(`Error checking link ${link} with Lightspeed filter: ${isBlockedResult.error.message}`);
+				logger.warn(
+					`Error checking link ${link} with Lightspeed filter: ${isBlockedResult.error.message}`,
+				);
 				// Return false if we can't check it (keep the link available)
 				return false;
 			}
 		} catch (error) {
-			logger.warn(`Error checking link ${link} with Lightspeed filter`, error as Error);
+			logger.warn(
+				`Error checking link ${link} with Lightspeed filter`,
+				error as Error,
+			);
 			// Return false if we can't check it (keep the link available)
 			return false;
 		}
 	}
-	
+
 	// Add other filter checks here as needed
 	// For now, only Lightspeed is implemented
-	
+
 	return false; // Not blocked by any implemented filters
 }
 
@@ -152,20 +172,24 @@ export async function getUnblockedLinksForCohort(
 	guildId: string,
 	category: string,
 	filters: string[],
-	logger: Logger
+	logger: Logger,
 ): Promise<string[]> {
 	// Get all links in the category
 	const allLinks = await linksDb.find({ guildId, cat: category }).toArray();
-	
+
 	const unblockedLinks: string[] = [];
-	
+
 	for (const linkDoc of allLinks) {
-		const isBlocked = await isLinkBlockedByFilters(linkDoc.link, filters, logger);
+		const isBlocked = await isLinkBlockedByFilters(
+			linkDoc.link,
+			filters,
+			logger,
+		);
 		if (!isBlocked) {
 			unblockedLinks.push(linkDoc.link);
 		}
 	}
-	
+
 	return unblockedLinks;
 }
 
@@ -176,40 +200,42 @@ export async function updateCohortLinks(
 	guildId: string,
 	cohortId: string,
 	globalCohort: boolean,
-	logger: Logger
+	logger: Logger,
 ): Promise<void> {
 	const now = new Date();
 	const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-	
+
 	const cohort = await cohortLinksDb.findOne({
 		guildId,
 		cohortId,
 		globalCohort,
 	});
-	
+
 	if (!cohort || cohort.lastChecked < oneHourAgo) {
-		logger.info(`Updating links for cohort ${cohortId} in guild ${guildId}`);
-		
+		logger.info(
+			`Updating links for cohort ${cohortId} in guild ${guildId}`,
+		);
+
 		// Get user's category to check links
 		const cohortMember = await cohortMembersDb.findOne({
 			guildId,
 			filters: cohort?.filters || [],
 		});
-		
+
 		if (cohortMember) {
 			const user = await usersDb.findOne({
 				guildId,
 				userId: cohortMember.userId,
 			});
-			
+
 			if (user) {
 				const unblockedLinks = await getUnblockedLinksForCohort(
 					guildId,
 					user.cat,
 					cohort?.filters || [],
-					logger
+					logger,
 				);
-				
+
 				await cohortLinksDb.updateOne(
 					{ guildId, cohortId, globalCohort },
 					{
@@ -219,7 +245,7 @@ export async function updateCohortLinks(
 							lastUpdated: now,
 						},
 					},
-					{ upsert: true }
+					{ upsert: true },
 				);
 			}
 		}
@@ -234,21 +260,21 @@ export async function getCohortLinksForUser(
 	userId: string,
 	filters: string[],
 	maxLinks: number,
-	logger: Logger
+	logger: Logger,
 ): Promise<string[]> {
 	const cohortId = generateCohortId(filters);
-	
+
 	// Get or create cohort links
 	const cohort = await cohortLinksDb.findOne({
 		guildId,
 		cohortId,
 	});
-	
+
 	if (!cohort || cohort.unblockedLinks.length === 0) {
 		logger.warn(`No unblocked links available for cohort ${cohortId}`);
 		return [];
 	}
-	
+
 	// Return the first maxLinks from the cohort's shared pool
 	return cohort.unblockedLinks.slice(0, maxLinks);
 }
@@ -262,18 +288,18 @@ export async function allocateLinksToUser(
 	userId: string,
 	cohortId: string,
 	maxLinks: number,
-	logger: Logger
+	logger: Logger,
 ): Promise<string[]> {
 	const cohort = await cohortLinksDb.findOne({
 		guildId,
 		cohortId,
 	});
-	
+
 	if (!cohort || cohort.unblockedLinks.length === 0) {
 		logger.warn(`No unblocked links available for cohort ${cohortId}`);
 		return [];
 	}
-	
+
 	// Everyone in the cohort gets the same links
 	return cohort.unblockedLinks.slice(0, maxLinks);
 }
@@ -284,10 +310,10 @@ export async function allocateLinksToUser(
 export async function getCohortMembers(
 	guildId: string,
 	filters: string[],
-	globalSystem: boolean
+	globalSystem: boolean,
 ): Promise<CohortMember[]> {
 	const cohortId = generateCohortId(filters);
-	
+
 	if (globalSystem) {
 		// Get members from all guilds with global system enabled
 		return await cohortMembersDb.find({
@@ -308,57 +334,79 @@ export async function getCohortMembers(
  */
 export async function checkAndNotifyCohorts(
 	bot: Bot,
-	logger: Logger
+	logger: Logger,
 ): Promise<void> {
 	logger.info("Starting cohort link check");
-	
+
 	// Get all guilds with cohort system enabled
 	const guildConfigs = await usersDb.distinct("guildId");
-	
+
 	for (const guildId of guildConfigs) {
 		try {
 			const config = await getGuildConfig(guildId);
-			
+
 			if (!config.cohort.enable) {
 				continue;
 			}
-			
+
 			// Get all cohorts in this guild
 			const cohorts = await cohortLinksDb.find({ guildId }).toArray();
-			
+
 			for (const cohort of cohorts) {
 				// Update cohort links
-				await updateCohortLinks(guildId, cohort.cohortId, cohort.globalCohort, logger);
-				
+				await updateCohortLinks(
+					guildId,
+					cohort.cohortId,
+					cohort.globalCohort,
+					logger,
+				);
+
 				// Check if cohort has fewer than max_links unblocked
 				if (cohort.unblockedLinks.length < config.cohort.max_links) {
 					// Get all members of this cohort
 					const members = await getCohortMembers(
 						guildId,
 						cohort.filters,
-						cohort.globalCohort
+						cohort.globalCohort,
 					);
-					
+
 					// Notify each member
 					for (const member of members) {
 						try {
-							const user = await bot.helpers.getUser(BigInt(member.userId));
+							const user = await bot.helpers.getUser(
+								BigInt(member.userId),
+							);
 							if (user) {
- 								const dm = await bot.helpers.getDmChannel(BigInt(member.userId));
-								await bot.helpers.sendMessage(BigInt(dm.toString()), {
-									content: `Your cohort in ${cohort.globalCohort ? "the global system" : `guild ${guildId}`} has new unblocked links available! Use \`/cohort getunblockedlinks\` to get them`,
-								});
+								const dm = await bot.helpers.getDmChannel(
+									BigInt(member.userId),
+								);
+								await bot.helpers.sendMessage(
+									BigInt(dm.toString()),
+									{
+										content: `Your cohort in ${
+											cohort.globalCohort
+												? "the global system"
+												: `guild ${guildId}`
+										} has new unblocked links available! Use \`/cohort getunblockedlinks\` to get them`,
+									},
+								);
 							}
 						} catch (error) {
-							logger.error(`Failed to notify user ${member.userId}`, error as Error);
+							logger.error(
+								`Failed to notify user ${member.userId}`,
+								error as Error,
+							);
 						}
 					}
 				}
 			}
 		} catch (error) {
-			logger.error(`Failed to check cohorts for guild ${guildId}`, error as Error);
+			logger.error(
+				`Failed to check cohorts for guild ${guildId}`,
+				error as Error,
+			);
 		}
 	}
-	
+
 	logger.info("Completed cohort link check");
-} 
+}

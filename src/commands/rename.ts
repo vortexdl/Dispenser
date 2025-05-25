@@ -142,7 +142,8 @@ export async function handle(
 			const action = `renaming category`;
 			const details = `'${oldName}' to '${newName}'`;
 			const context = `for guild ${guildId}`;
-			const msgRest = ` error occured while ${action} ${details} ${context}`;
+			const msgRest =
+				` error occured while ${action} ${details} ${context}`;
 			if (
 				dbErr instanceof MongoError || dbErr instanceof MongoServerError
 			) {
