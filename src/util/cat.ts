@@ -1,68 +1,111 @@
-import { Bot, Interaction } from "npm:discordeno";
+import { type Bot, type Interaction } from "@discordeno/bot";
+import { err, ok, Result } from "neverthrow";
+import { MongoError, MongoServerError } from "mongodb";
 
-import Responder from "../util/responder.ts";
+import Responder from "../util/Responder.ts";
 
 import { catsDb } from "$db";
+import { Logger } from "./Logger.ts";
 
-import { accessConfig } from "./AccessConfig.ts";
-import createErrorEmbed from "./createErrorEmbed.ts";
-import { getUserLocale } from "./getIfExists.ts";
+/**
+ * Updates user category selection in the database
+ * @param guildId The guild ID
+ * @param userId The user ID
+ * @param category The selected category
+ * @returns A Result indicating success or failure
+ */
+async function updateUserCategory(
+	guildId: string,
+	userId: string,
+	category: string,
+): Promise<Result<void, Error>> {
+	try {
+		await catsDb.updateMany(
+			{
+				guildId: guildId,
+				userId: userId,
+			},
+			{
+				$set: {
+					cat: category,
+				},
+			},
+			{
+				upsert: true,
+			},
+		);
+		return ok(undefined);
+	} catch (error) {
+		if (error instanceof MongoError || error instanceof MongoServerError) {
+			return err(
+				new Error(
+					`Database error while updating user category: ${error.message}`,
+				),
+			);
+		} else if (error instanceof Error) {
+			return err(
+				new Error(`Failed to update user category: ${error.message}`),
+			);
+		} else {
+			return err(
+				new Error(
+					`Failed to update user category: Unknown error occurred`,
+				),
+			);
+		}
+	}
+}
 
-export default async function (bot: Bot, interaction: Interaction): Promise<void> {
-	const responder = new Responder(bot, interaction.id, interaction.token);
+export default async function (
+	bot: Bot,
+	interaction: Interaction,
+	logger: Logger,
+) {
+	const responder = new Responder(bot, interaction.id, interaction.token, logger);
 
 	const userId = String(interaction.user.id);
 	const guildId = String(interaction.guildId);
 
 	const name = interaction.user.username;
 
-	if (!interaction.data) {
-		return await responder.respondEmbed(
-			await createErrorEmbed(
-				await accessConfig.getTranslation(
-					"Failed to get your category choice",
-				),
-				"bot_error",
-				getUserLocale(interaction.user),
-			),
+	const cats = interaction.data?.values;
+
+	if (!cats || !Array.isArray(cats) || cats.length === 0) {
+		logger.error(
+			"No categories found in interaction data for the category command",
+			{ userId, guildId },
+		);
+		return await responder.respond(
+			"No category selected or an error occurred.",
 		);
 	}
 
-	const catArr = interaction.data.values;
-	if (!catArr) {
-		return await responder.respondEmbed(
-			await createErrorEmbed(
-				await accessConfig.getTranslation(
-					"Failed to get your category choice",
-				),
-				"bot_error",
-				getUserLocale(interaction.user),
-			),
-		);
+	// Safely access the first element
+	const cat = cats[0];
+	if (typeof cat !== "string" || cat.trim() === "") {
+		logger.error("Invalid category value provided", {
+			userId,
+			guildId,
+			category: cat,
+		});
+		return await responder.respond("Invalid category selected!");
 	}
-	const [cat] = catArr;
 
 	console.log(`${name} selected ${cat}`);
 
-	await catsDb.updateMany(
-		{
-			guildId: guildId,
-			userId: userId,
-		},
-		{
-			$set: {
-				cat: cat,
-			},
-		},
-		{
-			upsert: true,
-		},
-	);
+	const result = await updateUserCategory(guildId, userId, cat);
 
-	return await responder.respond(
-		`${await accessConfig.getTranslation({
-			type: "misc_string",
-			searchString: "Categories updated",
-		})}${.checkmarkText}`,
-	);
+	if (result.isErr()) {
+		logger.error("Failed to update user category", {
+			error: result.error,
+			guildId,
+			userId,
+			category: cat,
+		});
+		return await responder.respond(
+			"Failed to update category due to a database error",
+		);
+	}
+
+	return await responder.respond("Updated ✅");
 }

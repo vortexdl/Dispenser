@@ -30,7 +30,7 @@ if [[ -z "$1" || "$1" == "deno" ]]; then
         fi
 
         echo "Starting deno"
-        nohup deno run --allow-read --allow-net --allow-sys --allow-env src/app.ts > $LOGS/stdlog.txt 2> $LOGS/stderr.txt &
+        nohup deno run --allow-all --unstable-kv src/app.ts &
     else
         echo "Deno is not installed on your system. Please install it!"
         exit 1

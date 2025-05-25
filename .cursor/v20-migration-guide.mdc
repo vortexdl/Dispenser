@@ -1,0 +1,89 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Since we are in the middle of migrating from discordeno 17 to 21, here are some tips (Taken from the Discordeno Discord Server https://discord.com/channels/785384884197392384/1307773501532536903/1307786395682738228):
+
+This guide only covers a part of the changes and not all (yet). Please use TS if you don't, otherwise you will cry.
+
+## Bot
+
+`JsonErrorCodes`, `Errors` exports are removed
+
+###  createBot:
+
+### Options: 
+First and foremost: You should set up desired properties
+
+`botId` -> `applicationId`
+`secretKey` -> moved to `proxy.authorization` in `rest` property
+
+### Methods / Properties:
+
+`bot.helpers.getAvatarURL`, `bot.helpers.getGuildIconURL` -> import `avatarUrl`, `guildIconUrl`
+`bot.helpers.xxx` -> either in `rest.xxx` or `gateway.xxx`, but most also being aliased in `bot.helpers.xxx` for backwards compatibility, `bot.helpers.xxx` will go through transformers etc. and only give you the desired properties, `rest.xxx` for example will give you all props Discord returns
+
+`options` param in `bot.helpers.sendFollowupMessage` now accepts `InteractionCallbackData` instead of `InteractionResponse`
+
+Helpers that fetches from api and returns collections will now return array instead (For example `bot.helpers.getReactions`)
+
+`embeds` in `bot.helpers.sendMessage` is now `DiscordEmbed[]` instead of `Embed[]`, `file` is now `files` as `FileContent[]`
+
+`reason` prop in `options` param of `bot.helpers.createInvite`, `bot.helpers.editChannel` etc. have been moved to a third param instead
+
+`bot.utils.xxx` is moved to their respective places. For example, `bot.utils.calculateShardId` is now at `gateway.calculateShardId`, some functions like `bot.utils.delay` are now a global export
+`bot.constants.routes` is moved to `rest.routes` and has been reworked
+
+`Role.botId`, `Role.integrationId` -> `Role.tags.botId`, `Role.tags.integrationId`
+
+`Message.authorId`, `Message.isFromBot` -> `Message.author.id`, `Message.author.bot`
+`Message.flags` has change from `number` to `ToggleBitfield`
+
+
+### Handlers:
+
+The types is changed from
+`(bot: Bot, data: DiscordGatewayPayload, shardId: number)` to
+`(bot: typeof bot, data: DiscordGatewayPayload, shardId: number)`
+
+### Events:
+
+First parameter (bot) is removed
+
+### Transformers:
+
+`transformers.reverse.interactionResponse` is removed
+
+## Gateway:
+
+`createShardManager` is removed
+
+### createGatewayManager:
+
+### Options:
+
+`gatewayBot` -> `connection`
+`gatewayConfig.xxx` -> `xxx`
+`handleDiscordPayload` is removed
+`tellWorkerToIdentify` is removed from options, you can use it from `manager` (return type of `createGatewayManager()`)
+
+### Methods / Properties:
+`gateway.manager` - `gateway` itself is now GatewayManager
+`gateway.calculateShardId` - first parameter (gateway) is removed
+
+`manager.createShardOptions.makePresence` -> `manager.makePresence`, `activities[number].createdAt` -> `since`
+`manager.createShardOptions.events`, `manager.createShardOptions.identify` -> `manager.events`, `manager.identify`
+`manager.createShardOptions.send` -> `manager.sendPayload` (but `highPriority` param is not there, you can use `shard.send` if you need it)
+
+## Rest:
+
+### createRestManager:
+
+### Options: 
+`secretKey` -> `proxy.authorization`
+`customUrl` -> `proxy.baseUrl`
+
+### Methods / Properties:
+
+`runMethod` -> `makeRequest`, first param (rest) is removed

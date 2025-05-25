@@ -1,67 +1,100 @@
-import { Bot, Interaction } from "npm:@discordeno/bot";
+import { type Bot, type Interaction } from "@discordeno/bot";
 import {
 	ApplicationCommandOptionTypes,
 	ApplicationCommandTypes,
-	CreateSlashApplicationCommand,
-} from "npm:@discordeno/types";
+} from "@discordeno/bot";
 
+import { MongoError, MongoServerError, type UpdateResult } from "mongodb";
 import { rolesDb } from "$db";
 
-import Responder from "../util/responder.ts";
+import Responder from "../util/Responder.ts";
+import type { PrefixedLogger } from "../util/Logger.ts";
 
-import { CommandConfig } from "../types/commands.d.ts";
-
-import { accessConfig } from "../util/AccessConfig.ts";
-import { getUserLocale } from "../util/getIfExists.ts";
-
-const data: CreateSlashApplicationCommand = {
+/**
+ * Command data for the `/premium` command
+ */
+export const data = {
 	name: "premium",
-	description: "Give premium perms to a role",
+	description: "Manages the premium role for the bot in this guild",
 	type: ApplicationCommandTypes.ChatInput,
 	options: [
 		{
 			type: ApplicationCommandOptionTypes.Role,
 			name: "role",
-			description: "The role that gets the perms",
+			description:
+				"The role to designate as the premium role for the bot",
+			required: true,
 		},
 	],
+	dmPermission: false,
 };
 
-const commandConfig: CommandConfig = {
-	managementOnly: true,
-};
+/**
+ * Whether this command can only be run by administrators
+ */
+export const adminOnly = true;
 
-async function handle(bot: Bot, interaction: Interaction): Promise<void> {
-	const responder = new Responder(bot, interaction.id, interaction.token);
+export async function handle(
+	bot: Bot,
+	interaction: Interaction,
+	logger: PrefixedLogger,
+): Promise<void> {
+	const responder = new Responder(bot, interaction.id, interaction.token, logger);
 
 	const guildId = String(interaction.guildId);
 
 	const roleId = interaction.data?.options?.[0]?.value;
 
-	rolesDb.updateMany(
-		{
-			guildId: guildId,
-		},
-		{
-			$set: {
-				premium: String(roleId),
+	if (!roleId) {
+		logger.error("The Role ID is missing from the option data");
+		await responder.respond("⚠️ Failed to get the premium role ID");
+		return;
+	}
+
+	await responder.defer();
+
+	// Set premium role for the guild in database
+	try {
+		await rolesDb.updateMany(
+			{
+				guildId: guildId,
 			},
-		},
-		{
-			upsert: true,
-		},
-	);
+			{
+				$set: {
+					premium: String(roleId),
+				},
+			},
+			{
+				upsert: true,
+			},
+		);
 
-	return await responder.respond(
-		`${
-			accessConfig.getTranslation({
-				type: "in_command",
-				searchString: "Gave premium status to",
-				commandTarget: "premium",
-				isEmbed: false,
-			}, getUserLocale(interaction.user))
-		} ${roleId}`,
-	);
+		logger.info(`Set premium role to ${roleId} in guild ${guildId}`);
+		await responder.editResponse(`Gave premium status to ${roleId} ✅`);
+	} catch (dbErr) {
+		const action = `setting the premium role`;
+		const context = `for guild ${guildId}`;
+		const responseMsgRest = ` error occurred while ${action}`;
+		const loggerMsgRest = `${responseMsgRest} ${context}`;
+		const responseMsg = `⚠️ An${responseMsgRest}`;
+		if (
+			dbErr instanceof MongoError || dbErr instanceof MongoServerError
+		) {
+			logger.error(
+				`A database${loggerMsgRest}: ${dbErr}`,
+			);
+			await responder.editResponse(
+				responseMsg,
+			);
+			return;
+		} else {
+			logger.error(
+				`An unexpected${loggerMsgRest}: ${dbErr}`,
+			);
+			await responder.editResponse(
+				responseMsg,
+			);
+			return;
+		}
+	}
 }
-
-export { commandConfig, data, handle };

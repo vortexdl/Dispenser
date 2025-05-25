@@ -1,251 +1,195 @@
-import { Bot, Interaction } from "npm:@discordeno/bot";
+import { type Bot, type Interaction } from "@discordeno/bot";
 import {
 	ApplicationCommandOptionTypes,
-	ButtonStyles,
-	CreateSlashApplicationCommand,
+	ChannelTypes,
 	InteractionResponseTypes,
-	MessageComponentTypes,
-} from "npm:@discordeno/types";
+	MessageFlags,
+} from "@discordeno/bot";
 
-import { linksDb } from "$db";
+import { botBansDb } from "$db";
 
-import { CommandConfig } from "../types/commands.d.ts";
+import Responder from "../util/Responder.ts";
+import {
+	createPrefixedLogger,
+	type Logger,
+} from "../util/Logger.ts";
 
-import Responder from "../util/responder.ts";
+import { getGuildConfig } from "../util/configManager.ts";
+import { generatePanelData } from "../util/genPanel.ts";
 
-import { getUserLocale } from "../util/getIfExists.ts";
-
-import { accessConfig } from "../util/AccessConfig.ts";
-
-// TODO: Instead of retrieving values inside of the panel, look inside of the server `/config`
-// TODO: Support panel updating `/panel update <messageLink>`. TODO: Also make it so that when the user adds the bot they can go use the context and click on apps to update.
-const data: CreateSlashApplicationCommand = {
+/**
+ * Command data for the /panel command
+ */
+export const data = {
 	name: "panel",
-	description: "Creates a link selection panel",
+	description: "Displays the link panel in the current channel or DM",
 	options: [
-		/*
-		{
-			type: ApplicationCommandOptionTypes.Mentionable,
-			name: "usersWithAccess",
-			description:
-				"This will make the panel only accessible to the users or users with the role provided",
-		},
-		*/
 		{
 			type: ApplicationCommandOptionTypes.Boolean,
 			name: "dm",
 			description:
-				"Message the user the link, rather than an hidden message in this channel",
+				"Send the panel via Direct Message instead of in the current channel",
+			required: false,
+			choices: [
+				{ name: "True", value: true },
+				{ name: "False", value: false },
+			],
 		},
 		{
 			type: ApplicationCommandOptionTypes.Channel,
 			name: "report",
-			description: "The channel to send issues to",
+			description:
+				"Override the default channel to send panel-related issues to",
+			required: false,
+			channelTypes: [ChannelTypes.GuildText],
 		},
 		{
 			type: ApplicationCommandOptionTypes.String,
-			name: "cat",
-			description: "Category text",
+			name: "categories",
+			description:
+				"Comma-separated list of categories to display (defaults to your top categories)",
+			required: false,
+			autocomplete: true,
 		},
 		{
-			type: ApplicationCommandOptionTypes.String,
-			name: "filter",
-			description: "Filter text",
-		},
-		{
-			type: ApplicationCommandOptionTypes.String,
-			name: "title",
-			description: "Title text",
-		},
-		{
-			type: ApplicationCommandOptionTypes.String,
-			name: "footer",
-			description: "Footer text",
-		},
-		{
-			type: ApplicationCommandOptionTypes.String,
-			name: "button",
-			description: "Button text",
-		},
-		{
-			type: ApplicationCommandOptionTypes.String,
-			name: "color",
-			description: "Color",
+			type: ApplicationCommandOptionTypes.Boolean,
+			name: "ephemeral",
+			description: "Whether the response should be visible only to you",
+			required: false,
+			choices: [
+				{ name: "True", value: true },
+				{ name: "False", value: false },
+			],
 		},
 	],
-	dmPermission: false,
+	dmPermission: true, // Allow in DMs and guild channels
 };
 
-const commandConfig: CommandConfig = {
-	managementOnly: true,
-};
+/**
+ * Whether this command can only be run by administrators
+ */
+export const adminOnly = true;
 
-// TODO: Create a config: isUserAllowedToUseNonEmpherals
+export async function handle(
+	bot: Bot,
+	interaction: Interaction,
+	logger: Logger,
+): Promise<void> {
+	const cmdLogger = createPrefixedLogger("panel", logger);
+	const responder = new Responder(
+		bot,
+		interaction.id,
+		interaction.token,
+		cmdLogger,
+	);
 
-async function handle(bot: Bot, interaction: Interaction): Promise<void> {
-	const responder = new Responder(bot, interaction.id, interaction.token);
+	const ephemeralOption = interaction.data?.options?.find(
+		(opt) => opt.name === "ephemeral",
+	)?.value as boolean | undefined ?? false;
 
-	const userLocale = getUserLocale(interaction.user);
+	await responder.defer(ephemeralOption ? MessageFlags.Ephemeral : undefined);
 
-	// TODO: Remove all configuration options and make the server managers use /config
-	const dmUser = interaction.data?.options?.find(
-		(opt) => opt.name === "dm",
-	)?.value;
-	//const report = interaction.data?.options?.find(
-	//(opt) => opt.name === "report",
-	//)?.value;
-	const title =
-		interaction.data?.options?.find((opt) => opt.name === "title")?.value ||
-		"Selection";
-	const catTitle = await accessConfig.getTranslation({
-		type: "in_command",
-		searchString: "Select a proxy site",
-		commandTarget: "panel",
-		isEmbed: true,
-	}, userLocale);
-	const filterTitle = await accessConfig.getTranslation({
-		type: "in_command",
-		searchString: "Select your filters",
-		commandTarget: "panel",
-		isEmbed: true,
-	}, userLocale);
-	const footer = await accessConfig.getTranslation({
-		type: "in_command",
-		searchString: "Hosted by Vyper Group",
-		commandTarget: "panel",
-		isEmbed: true,
-	}, userLocale);
-	const button = await accessConfig.getTranslation({
-		type: "in_command",
-		searchString: "Request",
-		commandTarget: "panel",
-		isEmbed: true,
-	}, userLocale);
-	const color = "e071ac";
-
-	const links = await linksDb
-		.find({
-			guildId: String(interaction.guildId),
-		})
-		.toArray();
-
-	// TODO: Limit array to 25
-	const cats: string[] = [
-		...new Set(
-			links
-				.map((entry) => entry.cat)
-				.filter((entry) => typeof entry !== "undefined")
-				.sort(),
-		),
-	];
-
-	if (cats.length === 0) {
-		await responder.respond("There are no links!", {
-			locale: userLocale,
-		});
+	if (!interaction.guildId) {
+		cmdLogger.warn("Panel command used outside of a server");
+		await responder.editResponse(
+			"This command can only be used in a server.",
+		);
 		return;
 	}
 
-	// Create dropdown
+	try {
+		const banRecord = await botBansDb.findOne({
+			guildId: String(interaction.guildId),
+			userId: String(interaction.user.id),
+		});
+		if (banRecord) {
+			cmdLogger.info(
+				`User ${interaction.user.id} is bot-banned in guild ${interaction.guildId}. Denying panel access.`,
+			);
+			await responder.editResponse(
+				"You are currently banned from using this feature in this server.",
+			);
+			return;
+		}
+	} catch (error: unknown) {
+		const message = error instanceof Error ? error.message : String(error);
+		cmdLogger.error(
+			`Error checking botBanDb for user ${interaction.user.id} in guild ${interaction.guildId}`,
+			message,
+		);
+		await responder.editResponse(
+			"An error occurred while checking your permissions. Please try again later.",
+		);
+		return;
+	}
 
-	const options = cats.map(function (cat) {
-		return {
-			label: cat,
-			value: cat,
-		};
-	});
+	const guildConfig = await getGuildConfig(String(interaction.guildId));
+	const panelConfig = guildConfig.panel;
 
-	const filters = [
-		{
-			label: await accessConfig.getTranslation({
-				type: "in_command",
-				searchString: "Lightspeed",
-				commandTarget: "panel",
-				isEmbed: true,
-			}, userLocale),
-			value: "ls",
-		},
-		{
-			label: await accessConfig.getTranslation({
-				type: "in_command",
-				searchString: "other",
-				commandTarget: "panel",
-				isEmbed: true,
-			}, userLocale),
-			value: "other",
-		},
-	];
+	const dmUser = interaction.data?.options?.find(
+		(opt) => opt.name === "dm",
+	)?.value as boolean | undefined ?? panelConfig.dm;
 
-	const embed = {
-		type: InteractionResponseTypes.ChannelMessageWithSource,
-		data: {
-			embeds: [
-				{
-					type: "rich",
-					color: parseInt(`0x${color}`),
-					title: title,
-					footer: {
-						text: footer,
-					},
-				},
-			],
-			components: [
-				{
-					type: MessageComponentTypes.ActionRow,
-					components: [
-						{
-							type: MessageComponentTypes.SelectMenu,
-							customId: "cat",
-							placeholder: catTitle,
-							options: options,
-						},
-					],
-				},
-				{
-					type: MessageComponentTypes.ActionRow,
-					components: [
-						{
-							type: MessageComponentTypes.SelectMenu,
-							customId: "filter",
-							placeholder: filterTitle,
-							options: filters,
-							maxValues: filters.length,
-						},
-					],
-				},
-				{
-					type: MessageComponentTypes.ActionRow,
-					components: [
-						{
-							type: MessageComponentTypes.Button,
-							label: button,
-							customId: dmUser ? "dmRequest" : "request",
-							style: ButtonStyles.Primary,
-							disabled: false,
-						},
-						{
-							type: MessageComponentTypes.Button,
-							label: await accessConfig.getTranslation({
-								type: "in_command",
-								searchString: "Report",
-								commandTarget: "panel",
-								isEmbed: true,
-							}, userLocale),
-							customId: "report",
-							style: ButtonStyles.Danger,
-							disabled: false,
-						},
-					],
-				},
-			],
-		},
+	const reportOptionValue = interaction.data?.options?.find(
+		(opt) => opt.name === "report",
+	)?.value as string | undefined;
+
+	const categoriesInput = interaction.data?.options?.find(
+		(opt) => opt.name === "categories",
+	)?.value as string | undefined;
+
+	const includedCategories: string[] | undefined = categoriesInput
+		? categoriesInput.split(",").map((c) => c.trim()).filter(Boolean).slice(
+			0,
+			25,
+		)
+		: undefined;
+
+	const reportChannelId = reportOptionValue ?? guildConfig.reportsChannelId;
+
+	const title = panelConfig.title;
+	const catPlaceholder = panelConfig.catPlaceholder;
+	const filterPlaceholder = panelConfig.filterPlaceholder;
+	const footerText = panelConfig.footerText;
+	const buttonText = panelConfig.buttonText;
+	const colorString = guildConfig.theme.main_color;
+
+	const masqrEnabled = guildConfig.masqr.enabled;
+	const useMasqrSeparation = masqrEnabled && panelConfig.masqrSeparation;
+	const cohortForce = guildConfig.cohort.enable && guildConfig.cohort.force;
+
+	const panelOptions = {
+		guildId: String(interaction.guildId),
+		dmUser,
+		title,
+		catPlaceholder,
+		filterPlaceholder,
+		footerText,
+		buttonText,
+		colorString,
+		logger: logger,
+		reportChannelId,
+		includedCategories,
+		masqrSeparation: useMasqrSeparation,
+		masqrEnabled,
+		cohortForce,
 	};
 
-	return await bot.helpers.sendInteractionResponse(
-		interaction.id,
-		interaction.token,
-		embed,
-	);
-}
+	cmdLogger.debug("Generating panel data", panelOptions);
+	const panelData = await generatePanelData(bot, panelOptions);
 
-export { commandConfig, data, handle };
+	if (!panelData) {
+		cmdLogger.warn(
+			`Panel generation failed for guild ${interaction.guildId}, likely no categories.`,
+		);
+		await responder.editResponse(
+			"Could not generate panel. There might be no categories set up for this server.",
+		);
+		return;
+	}
+
+	cmdLogger.info(
+		`Panel generated successfully for guild ${interaction.guildId}`,
+	);
+	await responder.editResponseWithData(panelData);
+}

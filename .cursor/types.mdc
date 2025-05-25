@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Rules regarding Types
+
+Ensure that you import things with `type` if you are only using the imported object as a type like `Logger` in the command modules

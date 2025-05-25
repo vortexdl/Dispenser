@@ -1,65 +1,97 @@
-import { Bot, Interaction } from "npm:@discordeno/bot";
+import { type Interaction } from "@discordeno/bot";
 import {
 	ApplicationCommandOptionTypes,
 	ApplicationCommandTypes,
-	CreateSlashApplicationCommand,
-} from "npm:@discordeno/types";
+} from "@discordeno/bot";
+import type { BotWithCache } from "../bot.ts";
 
-import { CommandConfig } from "../types/commands.d.ts";
-
+import { MongoError, MongoServerError, type UpdateResult } from "mongodb";
 import { rolesDb } from "$db";
 
-import Responder from "../util/responder.ts";
+import Responder from "../util/Responder.ts";
+import type { PrefixedLogger } from "../util/Logger.ts";
 
-import { getUserLocale } from "../util/getIfExists.ts";
-import { accessConfig } from "../util/AccessConfig.ts";
-
-const data: CreateSlashApplicationCommand = {
+/**
+ * Command data for the `/admin` command
+ */
+export const data = {
 	name: "admin",
-	description: "Give admin status to a role",
+	description: "Manages admin roles for the bot in this guild",
 	type: ApplicationCommandTypes.ChatInput,
 	options: [
 		{
 			type: ApplicationCommandOptionTypes.Role,
 			name: "role",
-			description: "The role that gets the status",
+			description: "The role to designate as the admin role for the bot",
 			required: true,
 		},
 	],
 	dmPermission: false,
 };
 
-const commandConfig: CommandConfig = {
-	managementOnly: true,
-};
+/**
+ * Whether this command can only be run by administrators
+ */
+export const adminOnly = true;
 
-async function handle(bot: Bot, interaction: Interaction): Promise<void> {
-	const responder = new Responder(bot, interaction.id, interaction.token);
-
-	const guildId = String(interaction.guildId);
-
-	const roleId = interaction.data?.options?.[0]?.value;
-
-	rolesDb.updateMany(
-		{
-			guildId: guildId,
-		},
-		{
-			$set: {
-				admin: String(roleId),
-			},
-		},
-		{
-			upsert: true,
-		},
+export async function handle(
+	bot: BotWithCache,
+	interaction: Interaction,
+	logger: PrefixedLogger,
+): Promise<void> {
+	const responder = new Responder(
+		bot,
+		interaction.id,
+		interaction.token,
+		logger,
 	);
 
-	await responder.respond(`${
-		accessConfig.getTranslation({
-			type: "misc_string",
-			searchString: "Gave admin status to",
-		}, getUserLocale(interaction.user))
-	} ${roleId}`);
-}
+	const roleId = interaction.data?.options?.[0]?.value as string | undefined;
 
-export { commandConfig, data, handle };
+	if (!roleId) {
+		logger.error("The Role ID is missing from the option data");
+		await responder.respond("⚠️ Failed to get the admin role ID");
+		return;
+	}
+
+	await responder.defer();
+
+	const guildIdString = String(interaction.guildId);
+
+	// Set admin role for the guild in database
+	try {
+		await rolesDb.updateMany(
+			{ guildId: guildIdString },
+			{ $set: { admin: roleId } },
+			{ upsert: true },
+		);
+
+		logger.info(`Set admin role to ${roleId} in guild ${guildIdString}`);
+		await responder.editResponse(`Gave admin status to ${roleId} ✅`);
+	} catch (dbErr) {
+		const action = `setting the admin role`;
+		const context = `for guild ${guildIdString}`;
+		const responseMsgRest = ` error occurred while ${action}`;
+		const loggerMsgRest = `${responseMsgRest} ${context}`;
+		const responseMsg = `⚠️ An${responseMsgRest}`;
+		if (
+			dbErr instanceof MongoError || dbErr instanceof MongoServerError
+		) {
+			logger.error(
+				`A database${loggerMsgRest}: ${dbErr}`,
+			);
+			await responder.editResponse(
+				responseMsg,
+			);
+			return;
+		} else {
+			logger.error(
+				`An unexpected${loggerMsgRest}: ${dbErr}`,
+			);
+			await responder.editResponse(
+				responseMsg,
+			);
+			return;
+		}
+	}
+}

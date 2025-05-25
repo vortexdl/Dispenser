@@ -1,179 +1,87 @@
-import { ObjectId } from "npm:mongodb";
+import config from "../config.ts";
 
-import config from "$config";
+import type {
+	BotBanDoc,
+	CohortLinks,
+	CohortMember,
+	GlobalBanDoc,
+	Limit,
+	Links,
+	LogChannels,
+	MasqrAccessLog,
+	MasqrCategoryConfig,
+	MasqrDomain,
+	MasqrLicense,
+	RatingDoc,
+	Roles,
+	UserCategory,
+	UserCohortLinks,
+	UserFilter,
+	Users,
+} from "./types/db.d.ts";
 
-import { PerServerConfig } from "./types/config.d.ts";
+import type { GuildConfig } from "./types/guildConfig.d.ts";
 
-export interface Cohort {
-	guildId: string;
-	districtShortname: string;
-	/* The filters encountered in their districts */
-	filters?: string[];
-	/* For managed chromebooks */
-	districtPolicy?: string;
-	/* Object IDs of LinkData */
-	linksRecieved: ObjectId[];
-	/* When the Cohort was first formed */
-	createdAt: number;
-}
+await config.mongoClient.connect();
+const db = config.mongoClient.db("bot");
 
-/* The filters the user has are collected in the corresponding cohorts created with the onboarding process, so they don't need to be here */
-export interface CrowdsourceReport {
-	relevantCohorts: Cohort[];
-	/* The snowflake ID of the user who submitted it */
-	by: string;
-	chromePolicy?: string;
-	/* This is only offered if they choose to not provide the policy (chrome://policy may also be blocked) */
-	filteringExtURLs?: string[];
-	appleMobileconfig?: string;
-	blockpageURLs?: string[];
-	forcedDNSServers?: string[];
-	forcedDoHServers?: string[];
-	created: {
-		// The Discord snowflake ID of whoever  created the link
-		by: string;
-		// This should be a UNIX timestamp
-		at: string;
-	};
-	// The UNIX timestamp of when the report was last modified
-	lastModified: string;
-}
-
-export type PremiumLevel = {
-	_id: ObjectId;
-	guildId: string;
-	userIds: string[];
-} | {
-	_id: ObjectId;
-	guildId: string;
-	roleIds: string;
-} | {
-	_id: ObjectId;
-	guildId: string;
-	userIds: string[];
-	roleIds: string;
-};
-
-export interface UserFilter {
-	guildId: string;
-	userId: string;
-	filters: Array<string>;
-}
-
-export interface UserChosenCategory {
-	guildId: string;
-	userId: string;
-	cat: string;
-}
-
-export interface GlobalUserData {
-	_id: ObjectId;
-	guildId: string;
-	/* The snowflake ID of the user */
-	userId: string;
-	cohortId: ObjectId;
-	hasOnboarded: boolean;
-	hasRecievedOnboarding: boolean;
-	/* If they try to run an interaction for the first, it will tell them that they must read the Privacy Policy and Terms of Service and agree to them with three buttons "I agree", "Terms of Service", and "Privacy Policy." If they do another interaction and they still haven't agreed it will tell them in the first sentence. "You haven't yet agreed to the Terms of Service and Privacy Policy!" */
-	hasRecievedLegalPrompt: boolean;
-	hasAgreedToLegal: boolean;
-}
-
-export interface ServerUserData {
-	_id: ObjectId;
-	guildId: string;
-	/* The snowflake ID of the user */
-	userId: string;
-	/* The links the user has already recieved */
-	links: Array<string>;
-	/* The amount of time the user has used the links post-reset */
-	times: number;
-	/* Is the user blocked from getting links to the server? */
-	blocked: boolean;
-	/* A list of categories the user is subscribed to */
-	subscriptionList: string[];
-}
-
-export interface LinkData {
-	guildId: string;
-	cat: string;
-	link: string;
-	supportedPremiumLevels: string[];
-	created: {
-		// The Discord snowflake ID of whoever created the link
-		by: string;
-		// This should be a UNIX timestamp
-		at: string;
-	};
-	lastModified: {
-		// The Discord snowflake ID of whoever last updated the link
-		by: string;
-		// This should be a UNIX timestamp
-		at: string;
-	};
-}
-
-interface ServerGuildConfig {
-	guildId: string;
-	config: PerServerConfig;
-}
-
-export interface ServerLimitData {
-	guildId: string;
-	cat: string;
-	limit: number;
-	premiumLimit: number;
-}
-
-export interface ServerRoleData {
-	guildId: string;
-	admin: string;
-	premium: string;
-}
-
-interface LogChannels {
-	guildId: string;
-	id: string;
-}
-
-interface PerServerConfigOverrides {
-	guildId: string;
-	config: PerServerConfig;
-}
-
-interface FaultToleranceAPI {
-	// The key
-	nodeHost: string;
-	// The value
-	brokenCommands: {
-		commandName: string;
-		errorMessage?: string;
-	}[];
-}
-
-const db = config.mongoClient.db(config.devMode ? "devBot" : "bot");
-
-const perServerConfigOverridesDb = db.collection<PerServerConfig>(
-	"perServerConfigOverrides",
+/** Collection for user-defined filters */
+export const filtersDb = db.collection<UserFilter>("filter");
+/** Collection for user-defined categories */
+export const catsDb = db.collection<UserCategory>("cat");
+/** Collection for user data and link history */
+export const usersDb = db.collection<Users>("users");
+/** Collection for all links */
+export const linksDb = db.collection<Links>("links");
+/** Collection for category request limits */
+export const limitsDb = db.collection<Limit>("limit");
+/** Collection for admin and premium roles per guild */
+export const rolesDb = db.collection<Roles>("roles");
+/** Collection for log channel configurations (deprecated or specific use) */
+export const chansDb = db.collection<LogChannels>("chans");
+/** Collection for guild-specific configurations */
+export const guildConfigsDb = db.collection<GuildConfig>("guildConfigs");
+/** Collection for server ratings */
+export const ratingsDb = db.collection<RatingDoc>("ratings");
+/** Collection for bot-specific user bans per guild */
+export const botBansDb = db.collection<BotBanDoc>("botBans");
+/** Collection for globally banned guilds (from gallery/discovery) */
+export const globalBansDb = db.collection<GlobalBanDoc>("globalBans");
+/** Collection for active Masqr licenses */
+export const masqrLicensesDb = db.collection<MasqrLicense>("masqrLicenses");
+/** Collection for Masqr-protected domains */
+export const masqrDomainsDb = db.collection<MasqrDomain>("masqrDomains");
+/** Collection for Masqr access logs */
+export const masqrAccessLogsDb = db.collection<MasqrAccessLog>(
+	"masqrAccessLogs",
 );
-const filtersDb = db.collection<UserFilter>("filter");
-const catsDb = db.collection<UserChosenCategory>("cat");
-const usersDb = db.collection<ServerUserData>("users");
-const linksDb = db.collection<Link>("links");
-const limitsDb = db.collection<ServerLimitData>("limit");
-const rolesDb = db.collection<ServerRoleData>("roles");
-const chansDb = db.collection<LogChannels>("chans");
+/** Collection for per-category Masqr license configurations */
+export const masqrCategoryConfigsDb = db.collection<MasqrCategoryConfig>(
+	"masqrCategoryConfigs",
+);
+/** Collection for cohort memberships */
+export const cohortMembersDb = db.collection<CohortMember>("cohortMembers");
+/** Collection for cohort unblocked links */
+export const cohortLinksDb = db.collection<CohortLinks>("cohortLinks");
+/** Collection for user cohort link allocations */
+export const userCohortLinksDb = db.collection<UserCohortLinks>("userCohortLinks");
 
-const faultToleranceDb = db.collection<FaultToleranceAPI>("faultToleranceAPI");
-
-export {
-	catsDb,
-	chansDb,
-	faultToleranceDb,
-	filtersDb,
-	limitsDb,
-	linksDb,
-	perServerConfigOverridesDb,
-	rolesDb,
-	usersDb,
+export type {
+	BotBanDoc,
+	CohortLinks,
+	CohortMember,
+	GlobalBanDoc,
+	GuildConfig,
+	Limit,
+	Links,
+	LogChannels,
+	MasqrAccessLog,
+	MasqrDomain,
+	MasqrLicense,
+	RatingDoc,
+	Roles,
+	UserCategory,
+	UserCohortLinks,
+	UserFilter,
+	Users,
 };

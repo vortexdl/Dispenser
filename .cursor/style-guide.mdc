@@ -1,0 +1,110 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Style guide
+
+
+## Writing descriptions for commands
+
+Don't say things like "Command for..." in the description. It's already a description what do you think it would be for.
+
+## Logging
+
+- Don't prefix the messages in the logger for the command modules with the command name
+
+
+## General Style of imports
+
+I want you to follow a general style of imports
+
+```ts
+// 1: Type-safety libraries
+import { Result, ok, err } from "neverthrow";
+
+// 2: Discordeno imports
+import {
+    type Bot,
+    type Interaction,
+} from "@discordeno/bot";
+import {
+    ApplicationCommandTypes,
+    ApplicationCommandOptionTypes,
+} from "@discordeno/types";
+// 2: Discordeno unofficial plugins
+
+// Here goes any other third-party library
+
+// 3: Database imports
+import { MongoError, MongoServerError } from "mongodb";
+import { limitsDb } from "$db";
+
+// 4: Responder and Logger
+import Responder from "../util/Responder.ts";
+import type { PrefixedLogger } from "../util/Logger.ts";
+
+// 5: Other `util/` imports
+```
+
+1. Type-safety utilities 
+2. Discordeno
+3. Database
+4. Responder and Logger 
+5. Other files in util
+
+> Add a newline between them
+
+## Using the database
+
+Always put a comment right before you access the database (right outside the `try...catch`) explaining what exactly you are doing
+
+## General style of logging (**IN A COMMAND MODULE**)
+
+- Whenever using Responder, and the fault of the error you want to convey is the user's fault add an exclamation mark to the end of it
+- Whenever using Responder, and the fault of the error you want to convey is the bot, add a warning emoji and a space right before like "⚠️ ..."
+- Whenever using Responder, and you want to convey anything happened/changed (anything changed in the database, etc...) add a check mark to the end of it "... ✅"
+- When using the logger, say "An unexpected error occured..." after testing for possible errors that you are aware could happen (with instanceof) and just falling back to it being a normal error (`instanceof Error`)
+- When using a logger, say "Failed to..." when you know why an error occured (and the Error is not generic)
+
+## Using `try...catch`
+
+Whenever **accessing the database in a command module**, do something like this (for safety)
+
+```ts
+import type { MongoError, MongoServerError } from "mongodb";
+
+...
+
+// Rename category in all associated links
+let linksUpdateRes: LinksDb;
+try {
+	linksUpdateRes = await linksDb.updateMany(
+		{ guildId, cat: oldName },
+		{ $set: { cat: newName } },
+	);
+} catch (dbErr) {
+	const responseMsgRest = ` error occured while renaming links`;
+	const loggerMsgRest = `${responseMsgRest} in category '${oldName}' for guild ${guildId}`;
+	const responseMsg = `⚠️ An${responseMsgRest}`;
+	if (
+		dbErr instanceof MongoError || dbErr instanceof MongoServerError
+	) {
+		logger.error(
+			`A database${loggerMsgRest}: ${dbErr}`,
+		);
+		await responder.editResponse(
+			responseMsg,
+		);
+		return;
+	} else {
+		logger.error(
+			`An unexpected${loggerMsgRest}: ${dbErr}`,
+		);
+		await responder.editResponse(
+			responseMsg,
+		);
+		return;
+    }
+}
+```

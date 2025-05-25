@@ -1,0 +1,3 @@
+# The Logging System - Proposal
+
+TODO: ...

@@ -1,102 +1,317 @@
-import { Bot, Interaction } from "npm:@discordeno/bot";
+import { Interaction, type User } from "@discordeno/bot";
 import {
 	ApplicationCommandOptionTypes,
 	ApplicationCommandTypes,
-	CreateSlashApplicationCommand,
-} from "npm:@discordeno/types";
+} from "@discordeno/bot";
+import type { BotWithCache } from "../bot.ts";
 
-import { ServerUserData, usersDb } from "$db";
+import { MongoError, MongoServerError } from "mongodb";
+import { usersDb } from "$db";
+import type { Users } from "../types/db.d.ts";
 
-import Responder from "../util/responder.ts";
+import Responder from "../util/Responder.ts";
+import type { PrefixedLogger } from "../util/Logger.ts";
 
-import { CommandConfig } from "../types/commands.d.ts";
-
-const data: CreateSlashApplicationCommand = {
+/**
+ * Command data for the /user command
+ */
+export const data = {
 	name: "user",
-	description: "Prints the user's info stored on the database",
+	description: "Manage user-specific settings or view user info",
 	type: ApplicationCommandTypes.ChatInput,
 	options: [
+		// Subcommand for viewing user info (already exists, ensure description is good)
 		{
-			type: ApplicationCommandOptionTypes.User,
-			name: "user",
-			description: "The user to query",
-		},
-		{
-			type: ApplicationCommandOptionTypes.String,
-			name: "category",
-			description: "The category to filter from",
+			name: "info",
+			description: "View information about a user or yourself",
+			type: ApplicationCommandOptionTypes.SubCommand,
+			options: [
+				{
+					name: "user",
+					description:
+						"The user to view information about (defaults to yourself)",
+					type: ApplicationCommandOptionTypes.User,
+					required: false,
+				},
+			],
 		},
 	],
-	dmPermission: false,
+	dmPermission: true, // Assuming user info can be checked in DMs too
 };
 
-const commandConfig: CommandConfig = {
-	managementOnly: true,
-};
+/**
+ * Whether this command can only be run by administrators
+ */
+export const adminOnly = true;
 
-async function handle(bot: Bot, interaction: Interaction): Promise<void> {
-	const responder = new Responder(bot, interaction.id, interaction.token);
+export async function handle(
+	bot: BotWithCache,
+	interaction: Interaction,
+	logger: PrefixedLogger,
+): Promise<void> {
+	const responder = new Responder(bot, interaction.id, interaction.token, logger);
 
-	const userArg = interaction.data?.options?.[0]?.value;
-	const user = (userArg && (await bot.helpers.getUser(String(userArg)))) ||
-		interaction.user;
-	const userId = userArg || String(user.id);
+	await responder.defer();
 
-	const cat = interaction.data?.options?.[1]?.value;
+	const userOptionValue = interaction.data?.options?.find(
+		(opt) => opt.name === "user",
+	)?.value as string | undefined;
+	const categoryOptionValue = interaction.data?.options?.find(
+		(opt) => opt.name === "category",
+	)?.value as string | undefined;
+	const cat: string | undefined = typeof categoryOptionValue === "string"
+		? categoryOptionValue
+		: undefined;
 
-	if (userId == "983595671074512967") {
-		return await responder.respond("Beep Boop 🤖");
-	}
+	let resolvedUserObject: Partial<User> | undefined;
+	let resolvedUserIdString: string = String(interaction.user.id);
+	let resolvedUsername: string;
 
-	if (cat) {
-		const userData: ServerUserData = await usersDb.findOne({
-			guildId: String(interaction.guildId),
-			userId: userId,
-			cat: cat,
-		});
+	try {
 
-		if (!userData) {
-			return await responder.respond(
-				`${
-					userId === String(interaction.user.id)
-						? "You have"
-						: `${user.username} has not`
-				} used the bot`,
-			);
+		if (userOptionValue) {
+			resolvedUserIdString = userOptionValue;
+			// Validate user ID format before BigInt conversion
+			if (!/^\d+$/.test(userOptionValue)) {
+				await responder.editResponse(
+					"Invalid user ID format. User ID must be a numeric string!",
+				);
+				return;
+			}
+
+			// bot.helpers.getUser expects a bigint for the ID
+			try {
+				const userIdBigInt = BigInt(userOptionValue);
+				try {
+					resolvedUserObject =
+						(await bot.helpers.getUser(userIdBigInt)) as
+							| Partial<User>
+							| undefined;
+				} catch (fetchError) {
+					if (
+						fetchError instanceof Error &&
+						fetchError.message.includes("404")
+					) {
+						logger.warn("User not found (404)", {
+							userOptionValue,
+							error: fetchError.message,
+						});
+						await responder.editResponse(
+							`User with ID ${resolvedUserIdString} not found!`,
+						);
+					} else if (
+						fetchError instanceof Error &&
+						fetchError.message.includes("API")
+					) {
+						logger.warn("Discord API error fetching user data", {
+							userOptionValue,
+							error: fetchError.message,
+						});
+						await responder.editResponse(
+							`⚠️ User with ID ${resolvedUserIdString} not found or could not be fetched (Discord API error)`,
+						);
+					} else if (fetchError instanceof Error) {
+						logger.warn("Error fetching user data", {
+							userOptionValue,
+							error: fetchError.message,
+						});
+						await responder.editResponse(
+							`⚠️ User with ID ${resolvedUserIdString} not found or could not be fetched`,
+						);
+					} else {
+						logger.warn("Unknown error fetching user data", {
+							userOptionValue,
+							error: fetchError,
+						});
+						await responder.editResponse(
+							`⚠️ User with ID ${resolvedUserIdString} not found or could not be fetched`,
+						);
+					}
+					return;
+				}
+			} catch (conversionError) {
+				if (conversionError instanceof RangeError) {
+					logger.error(
+						"BigInt conversion failed - number too large",
+						{ userOptionValue, error: conversionError.message },
+					);
+					await responder.editResponse(
+						`Invalid user ID: ${userOptionValue} - number is too large!`,
+					);
+				} else if (conversionError instanceof SyntaxError) {
+					logger.error("BigInt conversion failed - invalid format", {
+						userOptionValue,
+						error: conversionError.message,
+					});
+					await responder.editResponse(
+						`Invalid user ID format: ${userOptionValue}!`,
+					);
+				} else if (conversionError instanceof Error) {
+					logger.error("Error converting user ID to BigInt", {
+						userOptionValue,
+						error: conversionError.message,
+					});
+					await responder.editResponse(
+						`Invalid user ID: ${userOptionValue}!`,
+					);
+				} else {
+					logger.error("Unknown error converting user ID to BigInt", {
+						userOptionValue,
+						error: conversionError,
+					});
+					await responder.editResponse(
+						`Invalid user ID: ${userOptionValue}!`,
+					);
+				}
+				return;
+			}
+
+			if (!resolvedUserObject) {
+				await responder.editResponse(
+					`User with ID ${resolvedUserIdString} not found!`,
+				);
+				return;
+			}
+
+			resolvedUsername = resolvedUserObject &&
+					typeof resolvedUserObject.username === "string"
+				? resolvedUserObject.username
+				: `User ID ${resolvedUserIdString}`;
+		} else {
+			resolvedUserObject = interaction.user as Partial<User>;
+			resolvedUserIdString = String(interaction.user.id);
+			resolvedUsername = interaction.user &&
+					typeof interaction.user.username === "string"
+				? interaction.user.username
+				: `User ID ${resolvedUserIdString}`;
 		}
 
-		return await responder.respond(
-			`Links: ${userData.links.join(", \n")}\nTimes: ${userData.times}`,
-		);
-	} else {
-		const userDataList: ServerUserData[] = await usersDb
-			.find({
+		if (cat) {
+			const query = {
 				guildId: String(interaction.guildId),
-				userId: userId,
-			})
-			.toArray();
+				userId: resolvedUserIdString,
+				cat: cat,
+			};
+			// Get user data for specific category from database
+			let userData: Users | null;
+			try {
+				userData = await usersDb.findOne(query);
+			} catch (dbErr) {
+				const action = `fetching user data for category`;
+				const details = `'${cat}'`;
+				const context = `for user ${resolvedUserIdString}`;
+				const responseMsgRest = ` error occurred while ${action}`;
+				const loggerMsgRest = `${responseMsgRest} ${details} ${context}`;
+				const responseMsg = `⚠️ An${responseMsgRest}`;
+				if (
+					dbErr instanceof MongoError || dbErr instanceof MongoServerError
+				) {
+					logger.error(
+						`A database${loggerMsgRest}: ${dbErr}`,
+					);
+					await responder.editResponse(
+						responseMsg,
+					);
+					return;
+				} else {
+					logger.error(
+						`An unexpected${loggerMsgRest}: ${dbErr}`,
+					);
+					await responder.editResponse(
+						responseMsg,
+					);
+					return;
+				}
+			}
 
-		if (userDataList.length <= 0) {
-			return await responder.respond(
-				`${
-					user.id === interaction.user.id
-						? "You have"
-						: `${user.username} has`
-				} not used the bot`,
+			if (!userData) {
+				await responder.editResponse(
+					`${
+						resolvedUserIdString === String(interaction.user.id)
+							? "You have"
+							: `${resolvedUsername} has`
+					} not used the bot in the ${cat} category`,
+				);
+				return;
+			}
+
+			await responder.editResponse(
+				`Links: ${
+					userData.links.join(", \n")
+				}\nTimes: ${userData.times}`,
+			);
+		} else {
+			const query = {
+				guildId: String(interaction.guildId),
+				userId: resolvedUserIdString,
+			};
+			// Get all user data across categories from database
+			let userDatas: Users[];
+			try {
+				userDatas = await usersDb.find(query).toArray();
+			} catch (dbErr) {
+				const action = `fetching user data`;
+				const context = `for user ${resolvedUserIdString}`;
+				const responseMsgRest = ` error occurred while ${action}`;
+				const loggerMsgRest = `${responseMsgRest} ${context}`;
+				const responseMsg = `⚠️ An${responseMsgRest}`;
+				if (
+					dbErr instanceof MongoError || dbErr instanceof MongoServerError
+				) {
+					logger.error(
+						`A database${loggerMsgRest}: ${dbErr}`,
+					);
+					await responder.editResponse(
+						responseMsg,
+					);
+					return;
+				} else {
+					logger.error(
+						`An unexpected${loggerMsgRest}: ${dbErr}`,
+					);
+					await responder.editResponse(
+						responseMsg,
+					);
+					return;
+				}
+			}
+
+			if (userDatas.length <= 0) {
+				await responder.editResponse(
+					`${
+						resolvedUserIdString === String(interaction.user.id)
+							? "You have"
+							: `${resolvedUsername} has`
+					} not used the bot`,
+				);
+				return;
+			}
+
+			await responder.editResponse(
+				userDatas
+					.map(
+						(o) =>
+							`**${o.cat}**\nLinks: ${
+								o.links.join(
+									", ",
+								)
+							}\nTimes: ${o.times}\n`,
+					)
+					.join("\n"),
 			);
 		}
-
-		return await responder.respond(
-			userDataList
-				.map(
-					(userData) =>
-						`**${userData.cat}**\nLinks: ${
-							userData.links.join(", ")
-						}\nTimes: ${userData.times}\n`,
-				)
-				.join("\n"),
+	} catch (generalErr) {
+		const action = `processing user command`;
+		const context = `for user ${resolvedUserIdString}`;
+		const responseMsgRest = ` error occurred while ${action}`;
+		const loggerMsgRest = `${responseMsgRest} ${context}`;
+		const responseMsg = `⚠️ An${responseMsgRest}`;
+		logger.error(
+			`An unexpected${loggerMsgRest}: ${generalErr}`,
 		);
+		await responder.editResponse(
+			responseMsg,
+		);
+		return;
 	}
 }
-
-export { commandConfig, data, handle };
