@@ -1,8 +1,10 @@
 import { err, ok, Result } from "neverthrow";
 
+/** The Lightspeed API endpoint to check domain categorization */
 const api =
 	"https://archive.lightspeedsystems.com/domain_tab_info.php?text_file_name=reason&domain=";
 
+/** The list of blocked categories */
 const blockedCats = [
 	"porn",
 	"security",

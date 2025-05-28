@@ -572,10 +572,11 @@ export interface PrefixedLogger {
  * @returns A PrefixedLogger instance
  */
 export function createPrefixedLogger(
+	guildName: string,
 	prefix: string,
 	baseLoggerInstance: Logger = logger,
 ): PrefixedLogger {
-	const prefixString = `[${prefix}] `;
+	const prefixString = `[${prefix} - ${guildName}]`;
 
 	return {
 		debug: async (message, data, discordChannelIdOverride) => {

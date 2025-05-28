@@ -1,12 +1,13 @@
 import { Bot, Interaction } from "npm:@discordeno/bot";
 import {
+	ApplicationCommandOptionTypes,
 	ApplicationCommandTypes,
 	CreateSlashApplicationCommand,
 } from "npm:@discordeno/types";
 
 //import { linksDb } from "$db";
 
-import Responder from "../util/responder.ts";
+import Responder from "../util/Responder.ts";
 
 const data: CreateSlashApplicationCommand = {
 	name: "gallery",
@@ -35,8 +36,10 @@ async function handle(bot: Bot, interaction: Interaction): Promise<void> {
 	const responder = new Responder(bot, interaction.id, interaction.token);
 
 	// TODO: Implement
+	// appleflyer: what the fuck is this why is it empty fuck you ok and you didn timplement it shut th efuck up and dont delete this until you fix it
+	// dave9123: or should I, making links then subscribing with no paying subscription is just insane
 
-	responder.respond("This command is not yet implemented");
+	responder.respond("This command is not yet implemented!");
 }
 
 export { data, handle };

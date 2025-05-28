@@ -16,13 +16,12 @@ import { createProxyCache } from "npm:dd-cache-proxy";
 
 import config from "$config";
 
-import filterHandle from "./util/filter.ts";
-import catHandle from "./util/cat.ts";
-import requestHandle from "./util/request.ts";
-import masqrRequestHandle from "./util/masqrRequest.ts";
-import cohortRequestHandle from "./util/cohortRequest.ts";
+import filterHandle from "./interactions/dropdown/filterSelect.ts";
+import catHandle from "./interactions/dropdown/catSelect.ts";
+import requestHandle from "./interactions/button/request.ts";
+import masqrRequestHandle from "./interactions/button/masqrRequest.ts";
+import cohortRequestHandle from "./interactions/button/cohortRequest.ts";
 import { sendReport } from "./util/reporting.ts";
-import { handlePanelFilterSelect } from "./interactions/panelFilterSelect.ts";
 
 import { createPrefixedLogger, Logger } from "./util/Logger.ts";
 import Responder from "./util/Responder.ts";
@@ -34,15 +33,12 @@ import { generatePanelData } from "./util/genPanel.ts";
 
 import { getBearerToken } from "./util/getBearerToken.ts";
 
-// import { linksDb } from "$db";
-
 import {
 	getRankedConfigOptions,
 	mostPopularAdminIssuedCategories,
 	mostPopularUserCategories,
 } from "./util/heuristics.ts";
 import { getLinkAutocompleteChoices } from "./util/linkAutocomplete.ts";
-
 import { startCohortScheduler } from "./util/scheduler.ts";
 
 interface Command {
@@ -215,21 +211,15 @@ async function handleInteraction(interaction: Interaction): Promise<void> {
 		if (interaction.type === InteractionTypes.ApplicationCommand) {
 			const command = commands.get(interaction.data?.name || "");
 
-			logger.debug("Found the command");
-
 			if (!command) {
-				logger.error(`Command not found: ${interaction.data?.name}`);
-				const respondResult = await responder.respond(
-					"Sorry, I couldn't find that command",
+				await responder.respondErr(
+					`Command not found: ${interaction.data?.name}`,
+					logger,
+					"Sorry I could not find that command",
 				);
-				if (respondResult.isErr()) {
-					logger.error(
-						"Failed to send 'command not found' response",
-						{ error: respondResult.error },
-					);
-				}
 				return;
 			}
+			logger.debug(`Found the command ${command}!`);
 
 			if (
 				command.adminOnly &&
@@ -240,35 +230,37 @@ async function handleInteraction(interaction: Interaction): Promise<void> {
 					logger,
 				))
 			) {
-				logger.error(
+				await responder.respondErr(
 					`${interaction.user?.username} tried to run ${command.data.name} without permission`,
+					logger,
+					"You don't have permission to run this command",
 				);
-				const respondResult = await responder.respond(
-					"You don't have permission to run this command!",
-				);
-				if (respondResult.isErr()) {
-					logger.error(
-						"Failed to send 'permission denied' response",
-						{ error: respondResult.error },
-					);
-				}
 				return;
 			}
 
 			const bearerTokenRes = await getBearerToken(logger);
 			if (bearerTokenRes.isErr()) {
-				const msg = "Failed to get bearer token";
-				logger.error(msg, { error: bearerTokenRes.error });
-				const respondResult = await responder.respond(msg);
-				if (respondResult.isErr()) {
-					logger.error(
-						"Failed to send 'bearer token error' response",
-						{ error: respondResult.error },
-					);
-				}
+				await responder.respondErr(
+					"Failed to get bearer token",
+					logger,
+				);
 				return;
 			}
 			const bearerToken = bearerTokenRes.value;
+			let guildName = "DMs";
+			if ("guildId" in interaction) {
+				try {
+					guildName = bot.guilds.get(interaction.guildId);
+				} catch (err) {
+					await responder.respondErr(
+						"Failed to get guild name",
+						logger,
+						"Sorry! An internal error occurred while processing your request. Please try again later.",
+						err,
+					);
+					return;
+				}
+			}
 			try {
 				logger.debug(`Running command ${command.data.name}`);
 				await command.handle(
@@ -522,15 +514,11 @@ async function handleInteraction(interaction: Interaction): Promise<void> {
 			}
 		} else if (interaction.type === InteractionTypes.MessageComponent) {
 			if (!interaction.data) {
-				const respondResult = await responder.respond(
+				await responder.respondErr(
 					"Missing component data",
+					logger,
+					"Sorry! We were unable to retrieve some data due to an internal error. Please try again later!",
 				);
-				if (respondResult.isErr()) {
-					logger.error(
-						"Failed to send 'missing component data' response",
-						{ error: respondResult.error },
-					);
-				}
 				return;
 			}
 
@@ -620,7 +608,9 @@ async function handleInteraction(interaction: Interaction): Promise<void> {
 					);
 
 					if (!panelData) {
-						await responder.respond(
+						await responder.respondErr(
+							"panelData requested whilst there were no categories set up for the server!",
+							logger,
 							"Could not generate panel. There might be no categories set up for this server!",
 						);
 						return;
@@ -639,13 +629,12 @@ async function handleInteraction(interaction: Interaction): Promise<void> {
 						},
 					);
 					return;
-				} catch (error) {
-					logger.error(
-						`Error handling panel view for guild ${guildId}`,
-						{ error },
-					);
-					await responder.respond(
-						"An error occurred while generating the panel. Please try again later!",
+				} catch (err) {
+					await responder.respondErr(
+						"Panel generation failed for guild.",
+						logger,
+						"Sorry! An internal error occured while attempting to generate the panel. Please try again later!",
+						err,
 					);
 					return;
 				}
@@ -683,8 +672,6 @@ async function handleInteraction(interaction: Interaction): Promise<void> {
 			else if (isFilter) {
 				// Use panelFilterSelect for panel filter interactions
 				if (id.endsWith("filter_select")) {
-					await handlePanelFilterSelect(bot, interaction);
-				} else {
 					await filterHandle(bot, interaction, logger);
 				}
 			} else if (id === "config_change_modal") {
@@ -719,15 +706,11 @@ async function handleInteraction(interaction: Interaction): Promise<void> {
 				}
 
 				if (!subject || !details) {
-					const respondResult = await responder.respond(
-						"Subject and details are required for a report",
+					await responder.respondErr(
+						`User did not specify subject/details for the report`,
+						logger,
+						`Sorry! You did not specify the subject/details for the report. Please submit a valid response`,
 					);
-					if (respondResult.isErr()) {
-						logger.error(
-							"Failed to send 'report validation error' response",
-							{ error: respondResult.error },
-						);
-					}
 					return;
 				}
 
@@ -749,36 +732,19 @@ async function handleInteraction(interaction: Interaction): Promise<void> {
 					);
 
 					if (reportResult.isErr()) {
-						logger.error("Failed to send report from modal", {
-							error: reportResult.error,
-						});
-						const respondResult = await responder.respond(
-							"An error occurred while processing your report. Please try again later!",
+						await responder.respondErr(
+							"Failed to send report from modal",
+							logger,
+							"Sorry! An internal error occurred while processing your report. Please try again later!",
 						);
-						if (respondResult.isErr()) {
-							logger.error(
-								"Failed to send 'report processing error' confirmation",
-								{
-									originalError: reportResult.error,
-									responseError: respondResult.error,
-								},
-							);
-						}
 					}
-				} catch (error) {
-					logger.error("Error sending report from modal", { error });
-					const respondResult = await responder.respond(
-						"An error occurred while processing your report. Please try again later!",
+				} catch (err) {
+					await responder.respondErr(
+						"Failed to send report from modal",
+						logger,
+						"Sorry! An internal error occurred while processing your report. Please try again later!",
+						err,
 					);
-					if (respondResult.isErr()) {
-						logger.error(
-							"Failed to send 'report processing catch error' confirmation",
-							{
-								originalError: error,
-								responseError: respondResult.error,
-							},
-						);
-					}
 				}
 
 				if (interaction.data?.customId === "config_change_form") {
@@ -794,34 +760,19 @@ async function handleInteraction(interaction: Interaction): Promise<void> {
 			}
 		}
 	} catch (err) {
-		let errorDetail = "An unknown error occurred";
-		if (err instanceof Error) {
-			errorDetail = err.stack || err.message;
-		}
 		if (interaction.id && interaction.token) {
-			try {
-				const respondResult = await responder.respond(
-					"An unexpected server error occurred",
-				);
-				if (respondResult.isErr()) {
-					logger.error(
-						"Failed to send 'fallback server error' response",
-						{
-							originalError: err,
-							responseError: respondResult.error,
-						},
-					);
-				}
-			} catch (responseError) {
-				console.error(
-					"Failed to send fallback error response:",
-					responseError,
-				);
-			}
+			await responder.respondErr(
+				"An unexpected server error occurred",
+				logger,
+				"Sorry! An internal error occurred while processing your request. Please try again later.",
+				err,
+			);
 		} else {
-			console.error(
-				"Critical error in handleInteraction, and interaction object is missing id/token for response:",
-				{ error: err, interactionKeys: Object.keys(interaction || {}) },
+			await responder.respondErr(
+				"The interaction object is missing the id and token for the response",
+				logger,
+				"Sorry! An internal error occurred while processing your request. Please try again later.",
+				err,
 			);
 		}
 	}
@@ -835,28 +786,28 @@ export default async function initBot(): Promise<void> {
 		)
 	) {
 		if (file.name.endsWith(".ts")) {
+			let command;
 			try {
-				const command = await import(`./commands/${file.name}`);
-
-				if (!command.data) {
-					console.error(
-						"The command file does not export a data object:",
-						file.name,
-					);
-					continue;
-				}
-
-				commandData.push(command.data);
-
-				commands.set(command.data.name, command);
+				command = await import(`./commands/${file.name}`);
 			} catch (err) {
 				let errorDetail = "An unknown error occurred";
 				if (err instanceof Error) {
 					errorDetail = err.stack || err.message;
 				}
-				console.error(`Error importing ${file.name}\
-${errorDetail}`);
+				console.error(`Error importing ${file.name}${errorDetail}`);
 			}
+
+			if (!command?.data) {
+				console.error(
+					"The command file does not export a data object:",
+					file.name,
+				);
+				continue;
+			}
+
+			commandData.push(command.data);
+
+			commands.set(command.data.name, command);
 		}
 	}
 	//console.debug(`Uploading ${commandData.map((c) => c.name).join(", ")}`);

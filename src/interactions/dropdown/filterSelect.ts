@@ -1,28 +1,24 @@
 /**
  * @name Ryan Wilson
  */
-import {
-	type Bot,
-	type Interaction,
-} from "npm:discordeno@^21.0.0-nightly.1724219627";
-import {
-	InteractionResponseTypes,
-	MessageFlags,
-} from "npm:discordeno@^21.0.0-nightly.1724219627";
+import { type Bot, type Interaction } from "npm:@discordeno/bot";
+
+//import { InteractionResponseTypes, MessageFlags } from "npm:@discordeno/types";
 
 import { filtersDb } from "$db";
-import { logger } from "../util/Logger.ts";
+import { PrefixedLogger } from "../../util/Logger.ts";
 
-import Responder from "../util/Responder.ts";
+import Responder from "../../util/Responder.ts";
 
 /**
  * Handles the interaction when a user selects filters from the panel
  * @param bot The bot instance
  * @param interaction The interaction object
  */
-export async function handlePanelFilterSelect(
+export default async function handlePanelFilterSelect(
 	bot: Bot,
 	interaction: Interaction,
+	logger: PrefixedLogger,
 ): Promise<void> {
 	const responder = new Responder(
 		bot,
@@ -32,14 +28,11 @@ export async function handlePanelFilterSelect(
 	);
 
 	if (!interaction.guildId) {
-		logger.warn("Panel filter interaction received outside of a guild");
-		await responder.respond({
-			type: InteractionResponseTypes.ChannelMessageWithSource,
-			data: {
-				content: "This interaction can only be used in a server",
-				flags: MessageFlags.Ephemeral,
-			},
-		});
+		await responder.respondErr(
+			"The interaction 'handlePanelFilterSelect' was used outside of a server",
+			logger,
+			"This interaction can only be used in a server",
+		);
 		return;
 	}
 
@@ -82,15 +75,13 @@ export async function handlePanelFilterSelect(
 			},
 		);
 
-		await responder.respond("Your filter preferences have been updated ✅");
-	} catch (err: unknown) {
-		const msg = err instanceof Error ? err.message : String(err);
-		logger.error(
-			`Failed to update filters for user ${userId} in guild ${guildId}`,
+		await responder.respond("✅ Your filter preferences have been updated");
+	} catch (err) {
+		await responder.respondErr(
+			`An unexpected error occurred while updating your filter preference`,
+			logger,
+			"Sorry, we were unable to update your filter preferences due to an internal error. Please try again later.",
 			err,
-		);
-		await responder.respond(
-			`⚠️ An unexpected error occurred while updating your filter preferences: ${msg}`,
 		);
 	}
 }

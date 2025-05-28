@@ -9,17 +9,17 @@ import { ObjectId } from "mongodb";
 
 import { catsDb, filtersDb, limitsDb, usersDb } from "$db";
 
-import getLinks from "../util/links.ts";
-import isPremium from "../util/isPremium.ts";
-import isAdmin from "../util/isAdmin.ts";
-import Responder from "../util/Responder.ts";
-import { Logger } from "./Logger.ts";
-import { getGuildConfig } from "./configManager.ts";
+import getLinks from "../../util/links.ts";
+import isPremium from "../../util/isPremium.ts";
+import isAdmin from "../../util/isAdmin.ts";
+import Responder from "../../util/Responder.ts";
+import { Logger } from "../../util/Logger.ts";
+import { getGuildConfig } from "../../util/configManager.ts";
 import {
 	createDmDescription,
 	getFooterIconUrl,
 	getFooterText,
-} from "./dmHelper.ts";
+} from "../../util/dmHelper.ts";
 
 export default async function (
 	bot: Bot,
@@ -109,7 +109,7 @@ export default async function (
 	})) || {};
 
 	if (!filters) {
-		await responder.respond("Please choose your filters first");
+		await responder.respond("Please choose your filters first.");
 		return;
 	}
 
@@ -136,7 +136,7 @@ export default async function (
 		logger.info(
 			`${name} reached the limit for ${cat}! ${user?.times}/${limit}`,
 		);
-		await responder.respond("You have reached the monthly limit");
+		await responder.respond("You have reached the monthly limit of links!");
 		return;
 	}
 
@@ -212,8 +212,13 @@ export default async function (
 		let guildConfig;
 		try {
 			guildConfig = await getGuildConfig(String(guildId));
-		} catch (error) {
-			logger.error(`Failed to get guild config for ${guildId}:`, error);
+		} catch (err) {
+			responder.respondErr(
+				`Failed to get guild config for ${guildId}`,
+				logger,
+				"Sorry, we were unable to get the information about the guild! Please try again later.",
+				err,
+			);
 			guildConfig = null;
 		}
 
@@ -261,12 +266,14 @@ export default async function (
 				],
 			})
 			.then(async () => {
-				await responder.respond("Check dms!");
+				await responder.respond("Check your DMs!");
 			})
-			.catch(async (error: Error) => {
-				logger.error("Failed to send DM:", error);
-				await responder.respond(
-					"I couldn't send you a DM. Please check your privacy settings to allow DMs from server members",
+			.catch(async (err: Error) => {
+				await responder.respondErr(
+					"Could not send DM to user!",
+					logger,
+					"I couldn't send you a DM! Please check your privacy settings to allow DMs from server members.",
+					err,
 				);
 			});
 

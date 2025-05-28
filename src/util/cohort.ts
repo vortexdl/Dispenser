@@ -5,18 +5,18 @@ import type { Bot } from "@discordeno/bot";
 import {
 	cohortLinksDb,
 	cohortMembersDb,
-	filtersDb,
+	//	filtersDb,
 	linksDb,
-	userCohortLinksDb,
+	//	userCohortLinksDb,
 	usersDb,
 } from "../db.ts";
 import type {
 	CohortLinks,
 	CohortMember,
-	Links,
-	UserCohortLinks,
+	//	Links,
+	//	UserCohortLinks,
 } from "../types/db.d.ts";
-import type { GuildConfig } from "../types/guildConfig.d.ts";
+// import type { GuildConfig } from "../types/guildConfig.d.ts";
 import { getGuildConfig } from "./configManager.ts";
 import type { Logger } from "./Logger.ts";
 import blocked from "./checker/ls.ts";

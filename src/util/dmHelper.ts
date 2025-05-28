@@ -4,7 +4,7 @@
 
 import type { Bot, Guild } from "@discordeno/bot";
 import type { Logger } from "./Logger.ts";
-import type { GuildConfig } from "../types/guildConfig.d.ts";
+//import type { GuildConfig } from "../types/guildConfig.d.ts";
 
 /**
  * Discord's official logo URL for use in DM embeds

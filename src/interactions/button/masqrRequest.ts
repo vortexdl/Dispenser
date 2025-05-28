@@ -12,19 +12,19 @@ import { ObjectId } from "mongodb";
 
 import { catsDb, filtersDb, limitsDb, usersDb } from "$db";
 
-import getLinks from "../util/links.ts";
-import isPremium from "../util/isPremium.ts";
-import isAdmin from "../util/isAdmin.ts";
-import Responder from "../util/Responder.ts";
-import { Logger } from "./Logger.ts";
-import { getGuildConfig } from "./configManager.ts";
-import { generateMasqrLicense } from "./masqrIntegration.ts";
+import getLinks from "../../util/links.ts";
+import isPremium from "../../util/isPremium.ts";
+import isAdmin from "../../util/isAdmin.ts";
+import Responder from "../../util/Responder.ts";
+import { Logger } from "../../util/Logger.ts";
+import { getGuildConfig } from "../../util/configManager.ts";
+import { generateMasqrLicense } from "../../util/masqrIntegration.ts";
 import {
 	createDmDescription,
 	createMasqrDmDescription,
 	getFooterIconUrl,
 	getFooterText,
-} from "./dmHelper.ts";
+} from "../../util/dmHelper.ts";
 
 /**
  * Handles Masqr-protected link requests

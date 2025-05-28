@@ -12,7 +12,7 @@ import type {
 	GuildDiscoveryConfig,
 	GuildMasqrConfig,
 	GuildPanelConfig,
-	GuildThemeConfig,
+	//	GuildThemeConfig,
 } from "../types/guildConfig.d.ts";
 
 /**

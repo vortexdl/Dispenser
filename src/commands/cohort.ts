@@ -231,7 +231,7 @@ export async function handle(
 
 			await responder.editResponseWithData({
 				embeds: [{
-					title: "Guild Cohort Members",
+					title: "Server Cohort Members",
 					description,
 					color: parseInt(
 						guildConfig.theme.main_color.replace("#", ""),

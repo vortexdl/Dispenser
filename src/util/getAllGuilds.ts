@@ -5,7 +5,7 @@
 import { Bot, type Guild } from "@discordeno/bot";
 import { Logger } from "./Logger.ts";
 
-import config from "../../config.ts";
+//import config from "../../config.ts";
 
 /**
  * Fetches all guilds using OAuth2 with pagination
@@ -17,7 +17,7 @@ export default async function fetchAllUserGuilds(
 ): Promise<any[]> {
 	const allGuilds: any[] = [];
 	let after: string | undefined;
-	const limit = 200; // Discord's maximum per request
+	const limit = 200;
 
 	while (true) {
 		try {
@@ -64,7 +64,7 @@ export default async function fetchAllUserGuilds(
 
 			if (!Array.isArray(guilds)) {
 				throw new Error(
-					"Discord API returned invalid data: Expected array of guilds",
+					"Discord API returned invalid data (expected array of guilds)",
 				);
 			}
 
@@ -81,7 +81,6 @@ export default async function fetchAllUserGuilds(
 				break;
 			}
 
-			// Add a small delay to be respectful to the API
 			await new Promise((resolve) => setTimeout(resolve, 100));
 		} catch (error) {
 			if (error instanceof TypeError && error.message.includes("fetch")) {

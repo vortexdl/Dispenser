@@ -6,7 +6,7 @@ import {
 import type { ApplicationCommandOptionChoice } from "@discordeno/bot";
 import { type DiscordEmbed as Embed } from "@discordeno/types";
 
-import type { PrefixedLogger } from "./Logger.ts";
+import type { Logger, PrefixedLogger } from "./Logger.ts";
 
 export default class Responder {
 	bot: Bot;
@@ -56,6 +56,31 @@ export default class Responder {
 				);
 			}
 		}
+	}
+
+	/**
+	 * Respond to an error with the logger involved too, in the standard Dispenser way.
+	 * The rest of the codebase is currently being converted to using this method.
+	 * @param errMsg - The message of the error
+	 * @param logger - The logger instance that you want log with
+	 * @param userSpecificErrMsg - An error message that is more easier for the user to digest
+	 * @param propogatedErr - The original error message that is being annotated
+	 */
+	async respondErr(
+		errMsg: string,
+		logger: Logger | PrefixedLogger,
+		userSpecificErrMsg?: string,
+		propogatedErr?: string | any,
+	) {
+		const incidentId = crypto.randomUUID();
+		logger.error(
+			`${
+				propogatedErr
+					? `${errMsg}: ${propogatedErr}`
+					: errMsg
+			} - ${incidentId}`,
+		);
+		this.respond(`⚠️ ${userSpecificErrMsg || errMsg} - ${incidentId}`);
 	}
 
 	async respondEmbed(embed: Embed): Promise<void> {

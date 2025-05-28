@@ -9,9 +9,9 @@ import {
 import type {
 	FilterRole,
 	GuildConfig,
-	GuildDispenseConfig,
-	GuildMasqrConfig,
-	GuildThemeConfig,
+	// GuildDispenseConfig,
+	// GuildMasqrConfig,
+	// GuildThemeConfig,
 } from "../types/guildConfig.d.ts";
 import { UpdateFilter } from "mongodb";
 import { err, ok, Result } from "neverthrow";
@@ -191,7 +191,7 @@ export async function resetEntireGuildConfig(
 		if (error instanceof MongoError || error instanceof MongoServerError) {
 			return err(
 				new Error(
-					`A Database error occured while resetting guild config: ${error.message}`,
+					`A database error occured while resetting guild config: ${error.message}`,
 				),
 			);
 		} else if (error instanceof Error) {

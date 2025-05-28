@@ -2,10 +2,10 @@ import { type Bot, type Interaction } from "@discordeno/bot";
 import { err, ok, Result } from "neverthrow";
 import { MongoError, MongoServerError } from "mongodb";
 
-import Responder from "../util/Responder.ts";
+import Responder from "../../util/Responder.ts";
 
 import { catsDb } from "$db";
-import { Logger } from "./Logger.ts";
+import { Logger } from "../../util/Logger.ts";
 
 /**
  * Updates user category selection in the database
@@ -77,7 +77,7 @@ export default async function (
 
 	if (!cats || !Array.isArray(cats) || cats.length === 0) {
 		logger.error(
-			"No categories found in interaction data for the category command",
+			"No categories found in interaction data for the category button",
 			{ userId, guildId },
 		);
 		return await responder.respond(

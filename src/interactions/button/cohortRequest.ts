@@ -8,18 +8,22 @@ import {
 	type Member,
 } from "@discordeno/bot";
 
-import { filtersDb } from "../db.ts";
-import Responder from "./Responder.ts";
-import { Logger } from "./Logger.ts";
-import { getGuildConfig } from "./configManager.ts";
+import { filtersDb } from "$db";
+import Responder from "../../util/Responder.ts";
+import { Logger } from "../../util/Logger.ts";
+import { getGuildConfig } from "../../util/configManager.ts";
 import {
 	ensureCohortLinks,
 	ensureCohortMember,
 	generateCohortId,
 	getCohortLinksForUser,
 	updateCohortLinks,
-} from "./cohort.ts";
-import { formatFilters, getFooterIconUrl, getFooterText } from "./dmHelper.ts";
+} from "../../util/cohort.ts";
+import {
+	formatFilters,
+	getFooterIconUrl,
+	getFooterText,
+} from "../../util/dmHelper.ts";
 
 export default async function cohortRequestHandle(
 	bot: Bot,
@@ -124,8 +128,13 @@ export default async function cohortRequestHandle(
 			if (guild?.name) {
 				guildName = guild.name;
 			}
-		} catch (e) {
-			logger.error(`Failed to get guild ${guildId}:`, e);
+		} catch (err) {
+			await responder.respondErr(
+				`Failed to get guild ${guildId}`,
+				logger,
+				"Sorry, we were unable to get the information about the server you're in! Please try again later.",
+				err,
+			);
 		}
 
 		// Get footer icon and text
@@ -173,10 +182,12 @@ export default async function cohortRequestHandle(
 				}],
 			});
 			await responder.respond("Check DMs!");
-		} catch (error: unknown) {
-			logger.error("Failed to send DM:", error as Error);
-			await responder.respond(
-				"I couldn't send you a DM. Please check your privacy settings to allow DMs from server members",
+		} catch (err: unknown) {
+			await responder.respondErr(
+				"Could not send DM to user!",
+				logger,
+				"I couldn't send you a DM! Please check your privacy settings to allow DMs from server members.",
+				err,
 			);
 		}
 	} else {
